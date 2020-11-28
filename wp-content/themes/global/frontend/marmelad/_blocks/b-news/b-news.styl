@@ -1,0 +1,97 @@
+.b-news 
+    margin-top 70px
+    &__item 
+        margin-top 80px
+        display flex 
+        &:first-child 
+            margin-top 0
+        @media all and (max-width 950px)
+            flex-direction column
+            align-items center
+        @media all and (max-width 650px)
+            margin-top 30px
+            padding 80px 20px
+        @media all and (max-width 425px)
+            padding 80px 10px
+    &__item-img 
+        position relative 
+        z-index 3
+        flex 0 0 397px
+        max-width 397px 
+        width 397px
+        height 280px
+        display flex 
+        justify-content center 
+        align-items center
+        margin-right 75px
+        margin-top 4px
+        img 
+            position relative 
+            z-index 5
+        &:before 
+            content ""
+            position absolute 
+            top 0 
+            right 0 
+            width 122px
+            height 114px
+            z-index 2
+            background-color #c7efea
+            border-radius 17px 
+        @media all and (max-width 950px)
+            flex auto
+            width 100%
+            margin-right 0
+            margin-bottom 50px
+        &:after
+            content ""
+            position absolute 
+            bottom 0 
+            left 0 
+            width 122px
+            height 114px
+            z-index 2
+            background-color #c7efea
+            border-radius 17px 
+    &__item-data
+        color #008ed7
+        font-family : $fonts.headings
+        font-size 20px
+        font-weight 300
+    &__item-title
+        padding-top 9px 
+        color #13232a
+        font-family : $fonts.headings
+        font-size 43px
+        font-weight 300
+        line-height 50px
+        @media all and (max-width 425px)
+            line-height 38px 
+            font-size 32px
+    &__item-text 
+        padding-top 34px
+        color #333333
+        font-family : $fonts.base
+        font-size 14px
+        font-weight 600
+        line-height 25px
+        letter-spacing 0.9px
+
+        @media all and (max-width 480px)
+            padding-top 15px
+
+    &__item-read-more
+        text-align right
+        padding-top 15px 
+        padding-right 45px
+        a
+            color #008ed7
+            font-family : $fonts.base
+            font-size 20px
+            font-weight 400
+            text-decoration underline
+            text-transform uppercase
+            &:hover
+                text-decoration none
+        @media all and (max-width 425px)
+            padding-right 0

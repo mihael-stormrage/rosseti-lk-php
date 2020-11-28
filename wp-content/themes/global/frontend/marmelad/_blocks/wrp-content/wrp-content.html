@@ -1,0 +1,21 @@
+<div block="wrp-content" {% if pageTitle == 'РЕГИСТРАЦИЯ ИДЕИ/проекта' or pageTitle == 'Размещение проекта в каталоге' %} mods="mod" {% endif %} {% if pageTitle == 'Личный кабинет пользователя' %} mods="mod-user" {% endif %}>
+
+    {% if pageTitle == 'Main Page' %}
+        {% include "we-work.html" %}
+        {% include "main-projects.html" %}
+        {% include "ideas-main.html" %}
+    {% endif %}
+
+    {% if pageTitle == 'РЕГИСТРАЦИЯ ИДЕИ/проекта' %}
+        {% include "form-idea-project.html" %}
+    {% endif %}
+    
+    {% if pageTitle == 'Размещение проекта в каталоге' %}
+        {% include "form-idea-project-type2.html" %}
+    {% endif %}
+
+    {% if pageTitle == 'Личный кабинет пользователя' %}
+        {% include "b-cabinet-info.html" %}
+    {% endif %}
+
+</div><!-- b:wrp-content -->

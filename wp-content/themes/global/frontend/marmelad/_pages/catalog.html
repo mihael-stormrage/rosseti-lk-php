@@ -1,0 +1,27 @@
+= yaml =
+pageTitle: Каталог  
+bodyMods: catalog
+bodyClasses: ''
+scrollFixClasses: ''
+contentClasses: 'container'
+asideLeft: false
+asideRight: false
+layout: !!map
+    header : true
+    footer : true
+    left : false
+    right : false
+= yaml =
+
+{% extends '_layout.html' %}
+
+{% block main %}
+    
+    {% set mainTitleH1 = 'Каталог GI' %}
+    {% include "main-title.html" %}
+    {% set detail = Catalog %}
+    {% include 'b-news.html' %}
+    {% set bFormTilte = 'Подписатьсяна каталог' %}
+    {% set bFormText = 'Друзья, Мы поддерживаем развитие Талантов во всём Мире!  Сейчас Мы первые в Мире покупаем Идеи на любой стадии!Мы ищем тех, кто так же как Мы, может гене рировать идеи постоянно и станет частью нашей Команды! ' %}
+    {% include "b-form.html" %}
+{% endblock %}

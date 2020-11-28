@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="{{app.lang}}">
+
+    <head>
+
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta http-equiv="cleartype" content="on">
+
+        <meta name="theme-color" content="{{ app.stylus.theme_color }}">
+
+        <meta name="SKYPE_TOOLBAR" content="SKYPE_TOOLBAR_PARSER_COMPATIBLE" />
+        <meta name="format-detection" content="telephone=no">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <meta name="msapplication-tap-highlight" content="no">
+
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+
+        <meta name="MobileOptimized" content="320">
+        <meta name="HandheldFriendly" content="True">
+
+        <link rel="apple-touch-icon" href="apple-touch-icon.png">
+        <link rel="icon" href="favicon.ico" type="image/x-icon">
+        <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+
+        <title>{{ pageTitle}} - {{ app.package.name | capitalize}} v{{ app.package.version }}</title>
+        
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans|Oswald:400,500,600,700" rel="stylesheet">
+        
+        <link rel="stylesheet" href="css/plugins.min.css">
+        <link rel="stylesheet" href="css/normalize.css">
+        <link rel="stylesheet" href="css/style.css">
+
+        {# <script src="js/vendors/modernizr.js" async></script>
+        <script src="js/vendors/pep-0.4.2.min.js" async></script> #}
+
+    </head>
+
+    <body block="app" mods="{{ bodyMods }}" mix="block:{{bodyClasses}}">
+
+        <!--[if lte IE 9]>
+            <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
+        <![endif]-->
+
+        <div elem="wrapper" mix="block:{{scrollFixClasses}}">
+            
+            {% if layout.header %}
+            {% include 'app-header.html' %}
+            {% include 'fixed-header.html' %}
+            {% endif %}
+
+            <div elem="content" mix="block:{{contentClasses}}">
+
+                <main elem="main">
+                    {% block main %}{% endblock %}
+                </main><!-- e:main -->
+                
+                {% if layout.left %}
+                <aside elem="aside" mods="left">
+                    {% block asideLeft %}{% endblock %}
+                </aside><!-- e:aside m:left -->
+                {% endif %}
+
+                {% if layout.right %}
+                <aside elem="aside" mods="right">
+                    {% block asideRight %}{% endblock %}
+                </aside><!-- e:aside m:right -->
+                {% endif %}
+
+                {% if layout.footer %}
+                {% include 'app-footer.html' %}
+                {% endif %}
+
+            </div><!-- b:m-content -->
+            
+            
+
+        </div><!-- b:wrapper -->
+
+        {# {% include 'page-scroller.html' %} #}
+
+        <script src="js/vendors/jquery-3.2.1.min.js"></script>
+        <script src="js/plugins.min.js"></script>
+        <script src="js/app.js"></script>
+        <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB_wtaKmLrhi7LcA8v1jTIpt2Sz8-S0K_k&callback=initMap">
+        </script>
+    
+    </body><!-- b:w-page -->
+</html>

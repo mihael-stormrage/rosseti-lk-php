@@ -1,0 +1,158 @@
+<div block="b-contacts" class="site-width">
+    <div elem="wrap" class="white-back">    
+        <div elem="detail-wrap">  
+          <div elem="detail">
+              <a elem="detail-item" href="#">
+                  <span elem="item-img"><img src="img/adress_icon.svg" alt=""></span>
+                  <span elem="item-text">Россия, г. Москва, ул. Тверская, 14</span>
+              </a>
+              <a elem="detail-item" href="tel:+74958957921">
+                  <span elem="item-img"><img src="img/telephone_icon.svg" alt=""></span>
+                  <span elem="item-text">+7 -495 -895 -79 -21</span>
+              </a>
+              <a elem="detail-item" href="email:info@global-ideas.world">
+                  <span elem="item-img"><img src="img/e-mai_icon.svg" alt=""></span>
+                  <span elem="item-text">info@global-ideas.world</span>
+              </a>
+          </div>
+          {% include 'soc.html' %}
+        </div>
+        <div elem="map-wrap">
+          <div elem="map" id="map">
+          </div>
+          <div elem="mapzoom">
+            <button elem="mapzoom-in">+</button>
+            <button elem="mapzoom-out">–</button>
+          </div>
+        </div>
+        <script>
+                var map;
+                function initMap() {
+                  map = new google.maps.Map(document.querySelector('#map'), {
+                    center: {lat: 55.758050, lng: 37.613310},
+                    zoom: 8,
+                    disableDefaultUI: true,
+                  });
+
+                  initZoomControl(map);
+                  initMapTypeControl(map);
+                  initFullscreenControl(map);
+                }
+
+                // function initZoomControl(map) {
+                //   document.querySelector('.zoom-control-in').onclick = function() {
+                //     map.setZoom(map.getZoom() + 1);
+                //   };
+                //   document.querySelector('.zoom-control-out').onclick = function() {
+                //     map.setZoom(map.getZoom() - 1);
+                //   };
+                //   map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(
+                //       document.querySelector('.zoom-control'));
+                // }
+                function initZoomControl(map) {
+                  document.querySelector('.b-contacts__mapzoom-in').onclick = function() {
+                    map.setZoom(map.getZoom() + 1);
+                  };
+                  document.querySelector('.b-contacts__mapzoom-out').onclick = function() {
+                    map.setZoom(map.getZoom() - 1);
+                  };
+                  map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(
+                      document.querySelector('.zoom-control'));
+                }
+
+                function initMapTypeControl(map) {
+                  var mapTypeControlDiv = document.querySelector('.maptype-control');
+                  document.querySelector('.maptype-control-map').onclick = function() {
+                    mapTypeControlDiv.classList.add('maptype-control-is-map');
+                    mapTypeControlDiv.classList.remove('maptype-control-is-satellite');
+                    map.setMapTypeId('roadmap');
+                  };
+                  document.querySelector('.maptype-control-satellite').onclick =
+                      function() {
+                    mapTypeControlDiv.classList.remove('maptype-control-is-map');
+                    mapTypeControlDiv.classList.add('maptype-control-is-satellite');
+                    map.setMapTypeId('hybrid');
+                  };
+
+                  map.controls[google.maps.ControlPosition.LEFT_TOP].push(
+                      mapTypeControlDiv);
+                }
+
+                function initFullscreenControl(map) {
+                  var elementToSendFullscreen = map.getDiv().firstChild;
+                  var fullscreenControl = document.querySelector('.fullscreen-control');
+                  map.controls[google.maps.ControlPosition.RIGHT_TOP].push(
+                      fullscreenControl);
+
+
+                  fullscreenControl.onclick = function() {
+                    if (isFullscreen(elementToSendFullscreen)) {
+                      exitFullscreen();
+                    } else {
+                      requestFullscreen(elementToSendFullscreen);
+                    }
+                  };
+
+                  document.onwebkitfullscreenchange =
+                  document.onmsfullscreenchange =
+                  document.onmozfullscreenchange =
+                  document.onfullscreenchange = function() {
+                    if (isFullscreen(elementToSendFullscreen)) {
+                      fullscreenControl.classList.add('is-fullscreen');
+                    } else {
+                      fullscreenControl.classList.remove('is-fullscreen');
+                    }
+                  };
+                }
+
+                function isFullscreen(element) {
+                  return (document.fullscreenElement ||
+                          document.webkitFullscreenElement ||
+                          document.mozFullScreenElement ||
+                          document.msFullscreenElement) == element;
+                }
+                function requestFullscreen(element) {
+                  if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                  } else if (element.webkitRequestFullScreen) {
+                    element.webkitRequestFullScreen();
+                  } else if (element.mozRequestFullScreen) {
+                    element.mozRequestFullScreen();
+                  } else if (element.msRequestFullScreen) {
+                    element.msRequestFullScreen();
+                  }
+                }
+                function exitFullscreen() {
+                  if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                  } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                  } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                  } else if (document.msCancelFullScreen) {
+                    document.msCancelFullScreen();
+                  }
+                }
+          </script>
+          <div style="display:none;">
+            <div class="controls zoom-control">
+              <button class="zoom-control-in" title="Zoom In">+</button>
+              <button class="zoom-control-out" title="Zoom Out">−</button>
+            </div>
+            <div class="controls maptype-control maptype-control-is-map">
+              <button class="maptype-control-map"
+                      title="Show road map">Map</button>
+              <button class="maptype-control-satellite"
+                      title="Show satellite imagery">Satellite</button>
+            </div>
+            <div class="controls fullscreen-control">
+              <button title="Toggle Fullscreen">
+                <div class="fullscreen-control-icon fullscreen-control-top-left"></div>
+                <div class="fullscreen-control-icon fullscreen-control-top-right"></div>
+                <div class="fullscreen-control-icon fullscreen-control-bottom-left"></div>
+                <div class="fullscreen-control-icon fullscreen-control-bottom-right"></div>
+              </button>
+            </div>
+          </div>
+    </div>
+</div>

@@ -1,0 +1,53 @@
+<div block="form-idea-project">
+    <div elem="section">
+        <form elem="form" action="">
+            <div elem="body">
+                <div elem="items">
+                    <label elem="item">
+                        <div elem="input-title">Имя/Псевдоним</div>
+                        <input type="text" id="" name="" requared>
+                    </label><!-- e:label -->
+
+                    <label elem="item">
+                        <div elem="input-title">Специальность</div>
+                        <select name="" id="">
+                            <option value="">Industry</option>
+                            <option value="">Technology</option>
+                            <option value="">Biomed</option>
+                            <option value="">Design</option>
+                        </select>
+                    </label><!-- e:label -->
+
+                    <label elem="item">
+                        <div elem="input-title">Компания</div>
+                        <input type="password" id="" name="" requared>
+                    </label><!-- e:label -->
+
+                    <label elem="item">
+                        <div elem="input-title">E-mail</div>
+                        <input type="text" id="" name="" requared>
+                    </label><!-- e:label -->
+
+                    {% include "b-form-checkbox.html" %}
+
+                    <div block="attach-docs">
+                        <div elem="file">
+                            <span elem="icon"><icon name="paper-clip-01" tag="i"></span><!-- e:icon -->
+                            <input elem="file-set" type="file" name="" id="">
+                        </div>
+                    </div><!-- b:attach-docs -->
+
+                </div><!-- e:items -->
+
+                {% set downloadPicTitle = 'Фото автора' %}
+                {% set downloadPicTitle2 = 'Фото/схема' %}
+                {% include "download-pic.html" %}
+
+            </div><!-- e:body -->
+            <div elem="bottom">
+                <button elem="btn" type="submit" class="site-btn">Зарегистрировать</button>
+                <div elem="help-text">На ваш e-mail придет писсьмо о статусе заявки</div>
+            </div><!-- e:bottom -->
+        </form><!-- e:form -->
+    </div><!-- e:section -->
+</div><!-- b:form-idea-project -->

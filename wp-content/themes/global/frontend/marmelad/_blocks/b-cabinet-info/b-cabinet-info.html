@@ -1,0 +1,57 @@
+<div block="b-cabinet-info">
+    <div elem="section">
+        <form elem="form" action="">
+            <div elem="body">
+                <div elem="items">
+                    <div elem="item">
+                        <div elem="title">Имя/Псевдоним</div><!-- e:title -->
+                        <div elem="modify">
+                            <div elem="text" mods="border-bot"><input elem="user-date" type="text" disabled value="Константинопольский Константин Константинович"></div>
+                            <div elem="edit">
+                                <span elem="editBtn"><icon name="edit-01" tag="i"></span>
+                                <button type="submit"><icon name="save-01" tag="i"></button>
+                            </div><!-- e:edit -->
+                        </div><!-- e:modify -->
+                    </div><!-- e:item -->
+                    <div elem="item">
+                        <div elem="title">Специальность</div><!-- e:title -->
+                        <div elem="modify">
+                            <div elem="text">IT-специалсит, программист </div>
+                        </div><!-- e:modify -->
+                    </div><!-- e:item -->
+
+                    <div elem="item">
+                        <div elem="title">Компания</div><!-- e:title -->
+                        <div elem="modify">
+                            <div elem="text" mods="border-bot"><input elem="user-date" type="text" disabled value="IT-Innovations LTD"></div>
+                            <div elem="edit">
+                                <span elem="editBtn"><icon name="edit-01" tag="i"></span>
+                                <button type="submit"><icon name="save-01" tag="i"></button>
+                            </div><!-- e:edit -->
+                        </div><!-- e:modify -->
+                    </div><!-- e:item -->
+
+                    <div elem="item">
+                        <div elem="title">E-mail</div><!-- e:title -->
+                        <div elem="modify">
+                            <div elem="text" mods="border-bot"><input elem="user-date" type="text" disabled value="kostantinopolsky@gmail.com"></div>
+                            <div elem="edit">
+                                <span elem="editBtn"><icon name="edit-01" tag="i"></span>
+                                <button type="submit"><icon name="save-01" tag="i"></button>
+                            </div><!-- e:edit -->
+                        </div><!-- e:modify -->
+                    </div><!-- e:item -->
+
+                    {% include "info-materials.html" %}
+
+                </div><!-- e:items -->
+
+                <div elem="user-info">
+                    {% include "download-pic-user.html" %}
+
+                    {% include "b-form-checkbox.html" %}
+                </div><!-- e:user-info -->
+            </div><!-- e:body -->
+        </form><!-- e:form -->
+    </div><!-- e:section -->
+</div><!-- b:b-cabinet-info -->

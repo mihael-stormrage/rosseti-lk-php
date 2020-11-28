@@ -1,0 +1,24 @@
+= yaml =
+pageTitle: ИДЕИ 
+bodyMods: idea
+bodyClasses: ''
+scrollFixClasses: ''
+contentClasses: 'container'
+asideLeft: false
+asideRight: false
+layout: !!map
+    header : true
+    footer : true
+    left : false
+    right : false
+= yaml =
+
+{% extends '_layout.html' %}
+
+{% block main %}
+    
+    {% set mainTitleH1 = 'ИДЕИ' %}
+    {% include "main-title.html" %}
+    {% include 'b-ideas.html' %}
+
+{% endblock %}

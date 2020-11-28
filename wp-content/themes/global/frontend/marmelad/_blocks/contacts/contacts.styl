@@ -1,0 +1,224 @@
+   
+ #map {
+        height: 400px;  /* The height is 400 pixels */
+        width: 100%;  /* The width is the width of the web page */
+       }
+.gm-style .controls {
+        font-size: 28px;  /* this adjusts the size of all the controls */
+
+        background-color: white;
+        box-shadow: rgba(0, 0, 0, 0.3) 0px 1px 4px -1px;
+        box-sizing: border-box;
+        border-radius: 2px;
+        cursor: pointer;
+        font-weight: 300;
+        height: 1em;
+        margin: 6px;
+        text-align: center;
+        user-select: none;
+        padding: 2px;
+        width: 1em;
+      }
+.gm-style .controls button {
+border: 0;
+background-color: white;
+color: rgba(0, 0, 0, 0.6);
+}
+.gm-style .controls button:hover {
+color: rgba(0, 0, 0, 0.9);
+}
+
+.gm-style .controls.zoom-control {
+display: flex;
+flex-direction: column;
+height: auto;
+display: none;
+}
+.gm-style .controls.zoom-control button {
+font: 0.85em Arial;
+margin: 1px;
+padding: 0;
+}
+
+.gm-style .controls.maptype-control {
+display: none;
+flex-direction: row;
+width: auto;
+}
+.gm-style .controls.maptype-control button {
+display: inline-block;
+font-size: 0.5em;
+margin: 0 1px;
+padding: 0 6px;
+}
+.gm-style .controls.maptype-control.maptype-control-is-map .maptype-control-map {
+font-weight: 700;
+}
+.gm-style .controls.maptype-control.maptype-control-is-satellite .maptype-control-satellite {
+font-weight: 700;
+}
+
+.gm-style .controls.fullscreen-control{
+    display: none;
+}
+.gm-style .controls.fullscreen-control button {
+display: block;
+font-size: 1em;
+height: 100%;
+width: 100%
+}
+.gm-style .controls.fullscreen-control .fullscreen-control-icon {
+border-style: solid;
+height: 0.25em;
+position:absolute;
+width: 0.25em;
+}
+.gm-style .controls.fullscreen-control .fullscreen-control-icon.fullscreen-control-top-left {
+border-width: 2px 0 0 2px;
+left: 0.1em;
+top: 0.1em;
+}
+.gm-style .controls.fullscreen-control.is-fullscreen .fullscreen-control-icon.fullscreen-control-top-left {
+border-width: 0 2px 2px 0;
+}
+.gm-style .controls.fullscreen-control .fullscreen-control-icon.fullscreen-control-top-right {
+border-width: 2px 2px 0 0;
+right: 0.1em;
+top: 0.1em;
+}
+.gm-style .controls.fullscreen-control.is-fullscreen .fullscreen-control-icon.fullscreen-control-top-right {
+border-width: 0 0 2px 2px;
+}
+.gm-style .controls.fullscreen-control .fullscreen-control-icon.fullscreen-control-bottom-left {
+border-width: 0 0 2px 2px;
+left: 0.1em;
+bottom: 0.1em;
+}
+.gm-style .controls.fullscreen-control.is-fullscreen .fullscreen-control-icon.fullscreen-control-bottom-left {
+border-width: 2px 2px 0 0;
+}
+.gm-style .controls.fullscreen-control .fullscreen-control-icon.fullscreen-control-bottom-right {
+border-width: 0 2px 2px 0;
+right: 0.1em;
+bottom: 0.1em;
+}
+.gm-style .controls.fullscreen-control.is-fullscreen .fullscreen-control-icon.fullscreen-control-bottom-right {
+border-width: 2px 0 0 2px;
+}
+
+.b-contacts
+    .white-back
+        padding-top 80px
+        padding-bottom 100px
+        padding-right 55px
+        @media all and (max-width 700px)
+            padding 80px 15px
+        @media all and (max-width 550px)
+            padding 10px 15px 30px 15px
+
+    &__wrap 
+        display flex 
+        margin-top 65px
+        @media all and (max-width 1024px)
+            flex-direction column
+            // align-items center
+    &__detail-wrap 
+        display flex 
+        flex-direction column 
+        justify-content space-between
+        flex 1 1 auto
+        & .soc 
+            margin-left 30px
+    &__detail 
+        margin-top 20px
+        padding-right 10px
+    &__detail-item 
+        display flex 
+        align-items center
+        padding-top 3px
+        text-decoration none
+                
+    &__item-img 
+        margin-right 20px
+        max-width 30px 
+        width 100%
+        @media all and (max-width 480px)
+            max-width 20px
+            img 
+                width 20px
+        .svg-icon 
+            width 48px 
+            height 48px
+    &__item-text 
+        color #13232a
+        font-family : $fonts.headings
+        font-size 29px
+        font-weight 100
+        letter-spacing -0.7px
+        text-decoration none
+        @media all and (max-width 480px)
+            font-size 20px
+    @media all and (max-width 1024px )
+        & .soc
+            margin-top 30px
+            margin-left -30px
+    &__map-wrap
+        margin-top 20px
+        flex 0 0 570px 
+        max-width 570px 
+        width 570px 
+        display flex 
+        align-items center
+        justify-content space-between
+        @media all and (max-width 1024px)
+            margin-right 0
+            margin-top 30px
+            flex auto 
+        @media all and (max-width 650px)
+            max-width 100%
+            width auto
+            flex-direction column 
+            align-items center
+            
+    &__map 
+        border-radius 17px
+        height 384px
+        max-width 480px 
+        width 100%
+    &__mapzoom
+        display flex 
+        flex-direction column
+        @media all and (max-width 650px)
+            flex-direction row
+            margin-top 20px
+        button 
+            width 50px
+            height 45px
+            display flex 
+            justify-content center
+            align-items center            
+            border-radius 15px
+            border 1px solid #13acc3
+            // padding 14px 17px 
+            color #0f8698
+            line-height 0.5px
+            outline none
+            font-family : $fonts.headings
+            font-size 46px
+            font-weight 300
+            background #fff
+            transition all 0.3s ease
+            box-shadow none          
+            &:nth-child(2)
+                margin-top 17px
+                font-size 30px
+                width auto 
+                height auto
+                padding 18px 15px 25px 15px
+                @media all and (max-width 650px)
+                    margin-top 0
+                    margin-left 18px
+            &:hover 
+                box-shadow inset 2px 6px 16px rgba(0, 0, 0, 0.08)
+                background-image linear-gradient(42deg, rgba(11, 112, 183, 0.61) 0%, rgba(11, 183, 183, 0) 100%)
+                

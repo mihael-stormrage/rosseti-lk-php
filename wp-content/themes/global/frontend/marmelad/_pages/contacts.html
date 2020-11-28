@@ -1,0 +1,24 @@
+= yaml =
+pageTitle: Контакты 
+bodyMods: contacts
+bodyClasses: ''
+scrollFixClasses: ''
+contentClasses: 'container'
+asideLeft: false
+asideRight: false
+layout: !!map
+    header : true
+    footer : true
+    left : false
+    right : false
+= yaml =
+
+{% extends '_layout.html' %}
+
+{% block main %}
+    
+    {% set mainTitleH1 = 'Контакты' %}
+    {% include "main-title.html" %}
+    {% include 'contacts.html' %}
+
+{% endblock %}

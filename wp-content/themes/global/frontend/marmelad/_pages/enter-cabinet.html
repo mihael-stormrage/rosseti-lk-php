@@ -1,0 +1,25 @@
+= yaml =
+pageTitle: Вход в личный кабинет
+bodyMods: enter-cabinet
+bodyClasses: ''
+scrollFixClasses: ''
+contentClasses: 'container'
+asideLeft: false
+asideRight: false
+layout: !!map
+    header : true
+    footer : true
+    left : false
+    right : false
+= yaml =
+
+{% extends '_layout.html' %}
+
+{% block main %}
+
+    {% set mainTitleH1 = 'Вход в личный кабинет' %}
+    {% include "main-title.html" %}
+
+    {% include "login.html" %}
+
+{% endblock %}

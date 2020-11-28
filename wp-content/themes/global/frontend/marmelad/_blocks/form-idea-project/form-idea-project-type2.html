@@ -1,0 +1,81 @@
+<div block="form-idea-project" mods="type2">
+    <div elem="section">
+        <form elem="form" action="">
+            <div elem="body">
+                <div elem="items">
+                    <label elem="item">
+                        <div elem="input-title">Name of Project</div>
+                        <input type="text" id="" name="" requared>
+                    </label><!-- e:label -->
+
+                    <label elem="item">
+                        <div elem="input-title">Location</div>
+                        <select name="" id="">
+                            <option value="">Industry</option>
+                            <option value="">Technology</option>
+                            <option value="">Biomed</option>
+                            <option value="">Design</option>
+                        </select>
+                    </label><!-- e:label -->
+
+                    <label elem="item">
+                        <div elem="input-title">Contacts</div>
+                        <input type="password" id="" name="" requared>
+                    </label><!-- e:label -->
+
+                    <label elem="item">
+                        <div elem="input-title">Type of Industry</div>
+                        <select name="" id="">
+                            <option value="">Industry</option>
+                            <option value="">Technology</option>
+                            <option value="">Biomed</option>
+                            <option value="">Design</option>
+                        </select>
+                    </label><!-- e:label -->
+
+                    <label elem="item">
+                        <div elem="input-title">Product</div>
+                        <select name="" id="">
+                            <option value="">Industry</option>
+                            <option value="">Technology</option>
+                            <option value="">Biomed</option>
+                            <option value="">Design</option>
+                        </select>
+                    </label><!-- e:label -->
+
+                    {% include "b-form-checkbox-type2.html" %}
+
+                    <div block="informers">
+                        <div elem="section">
+                            <div elem="title">Metrics</div>
+                            <div elem="items">
+                                <div elem="item">
+                                    <a elem="img" href="#"><img src="img/metrics-pic.png" alt=""></a>
+                                </div><!-- e:item -->
+                                <div elem="item">
+                                    <a elem="img" href="#"><img src="img/metrics-pic2.png" alt=""></a>
+                                </div><!-- e:item -->
+                                <div elem="item">
+                                    <a elem="img" href="#"><img src="img/metrics-pic3.png" alt=""></a>
+                                </div><!-- e:item -->
+                                <div elem="item">
+                                    <a elem="img" href="#"><img src="img/metrics-pic4.png" alt=""></a>
+                                </div><!-- e:item -->
+                            </div><!-- e:items -->
+                        </div><!-- e:section -->
+                    </div><!-- b:informers -->
+
+                </div><!-- e:items -->
+
+                {% set downloadPicTitle = 'Your logo' %}
+                {% set downloadPicTitle2 = 'Product' %}
+                {% include "download-pic.html" %}
+
+            </div><!-- e:body -->
+            <div elem="bottom">
+                <a elem="btn" href="#" class="site-btn">Offer to a Partner</a>
+                <a elem="btn" href="#" class="site-btn">Offer to an Investor</a>
+            </div><!-- e:bottom -->
+        </form><!-- e:form -->
+    </div><!-- e:section -->
+</div><!-- b:form-idea-project -->

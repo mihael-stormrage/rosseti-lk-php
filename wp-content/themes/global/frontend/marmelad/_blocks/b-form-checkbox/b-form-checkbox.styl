@@ -1,0 +1,105 @@
+.b-form-checkbox
+
+    &__title
+        font-size 14px
+        color #333
+        font-weight 400
+        line-height 20px
+        margin-bottom 20px
+
+    &__items
+        width 385px
+        max-width 100%
+        display flex
+        flex-wrap wrap
+
+        @media screen and (max-width 420px)
+            justify-content space-between
+
+    &__item
+        width 127px
+        display flex
+        justify-content flex-end
+        margin-bottom 30px
+
+        @media screen and (max-width 480px)
+            margin-bottom 15px
+
+        @media screen and (max-width 420px)
+            justify-content center
+
+    &__label
+        cursor pointer
+
+    &__icon
+        width 55px
+        height 55px
+        margin-right auto
+        margin-left auto
+        margin-bottom 5px
+        text-align center
+
+        img
+            max-width 100%
+    &__name
+        font-size 14px
+        color #000
+        font-weight 400
+        margin-top 10px
+        margin-right 5px
+        margin-left 5px
+        display inline-block
+        vertical-align top
+
+    &--type2
+        & ^[0]
+
+            &__items
+                width 440px
+                flex-wrap wrap
+                justify-content space-between
+
+                @media screen and (max-width 640px)
+                    width 100%
+
+            &__item    
+                width auto
+                &:last-child
+                    margin-right 0
+
+                @media screen and (max-width 480px)    
+                    flex 1 1 50%
+                    justify-content flex-start
+                    
+            &__label
+                display flex
+                align-items flex-end       
+
+            &__name
+                font-weight 700
+                line-height 1
+                margin-top 0
+                margin-left 0
+                margin-right 10px
+
+.jq-checkbox
+    margin-right 0
+
+.jq-checkbox, 
+.jq-radio
+    width 28px
+    height 28px
+    border-radius 5px
+    border 1px solid #0dc3c5
+
+.jq-checkbox__div
+    transition background-color .3s
+
+.jq-checkbox.checked 
+    .jq-checkbox__div
+        width 27px
+        height 27px
+        border none
+        background-color #008ed7
+        transform none
+        margin 0

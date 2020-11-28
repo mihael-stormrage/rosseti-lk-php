@@ -1,0 +1,80 @@
+.info-materials
+
+    &__title
+        font-size 43px
+        font-family : $fonts.headings
+        color #13232a
+        font-weight 300
+        line-height 1
+        margin-bottom 45px
+
+        @media screen and (max-width 850px)
+            font-size 36px
+
+        @media screen and (max-width 480px)    
+            margin-bottom 15px
+            
+    &__links
+        margin-bottom 13px
+
+        a
+            font-size 14px
+            color #008ed7
+            font-weight 400
+            margin-right 25px
+            &:hover
+                text-decoration none
+
+            &.active-info
+                color #646363
+                text-decoration none
+                cursor default
+
+    &__item
+        margin-bottom 45px
+
+        @media screen and (max-width 480px)    
+            margin-bottom 15px
+
+    &__checkbox
+        display flex    
+
+    &__label
+        display flex
+        align-items flex-end
+        margin-right 38px   
+
+    &__name
+        font-size 14px
+        font-weight 400
+        line-height 1
+        margin-left 0
+        margin-right 10px
+
+    &__preview-post
+        margin-top 25px
+
+    &__preview-post-link
+        font-size 16px
+        color #008ed7
+        font-weight 600
+        display block
+        margin-bottom 15px
+        &:hover
+            text-decoration none
+
+    &__preview-post-info
+        display flex
+        align-items flex-end
+
+    &__preview-post-icon
+        width 24px
+        height 30px
+        margin-right 5px
+        img
+            max-width 100%
+
+    &__preview-post-text
+        font-size 12px
+        color #646363
+        font-style italic                    

@@ -1,0 +1,141 @@
+.b-form
+    margin-bottom 170px
+
+    @media screen and (max-width 960px)
+        margin-bottom 0
+
+    &__section
+        padding 0
+
+    &__body
+        padding 135px 155px 115px 165px
+        display flex
+        border-radius 31px 20px 20px
+        background-color #fff
+
+        @media screen and (max-width 960px)
+            padding 70px
+
+        @media screen and (max-width 767px)
+            padding 30px
+
+        @media screen and (max-width 639px)
+            flex-direction column
+
+        @media screen and (max-width 480px)    
+            padding 15px
+
+    &__desc
+        width 290px
+        max-width 100%
+        margin-right 80px
+
+        @media screen and (max-width 639px)
+            width 100%
+
+    &__title
+        font-size 43px
+        color #333333
+        font-family : $fonts.headings
+        font-weight 500 
+        line-height 1.2
+        margin-bottom 20px
+
+        @media screen and (max-width 767px)
+            font-size 36px
+
+        @media all and (max-width 480px)
+            margin-bottom 10px
+
+    &__text
+        font-size 14px
+        color #333
+        font-weight 400
+        line-height 1.8
+
+    &__items
+        width 490px
+        max-width 100%
+        display flex
+        flex-direction column
+
+        @media screen and (max-width 639px)
+            width 100%
+
+    &__item
+        margin-bottom 25px
+
+    &__input-title
+        font-size 14px
+        color #333333
+        font-weight 400
+        margin-bottom 10px
+
+    &__btn
+        margin-left auto
+
+        @media screen and (max-width 440px)
+            min-width auto
+            width 100%
+
+.app--main
+    
+    .b-form
+        margin-right 15px
+        margin-left 15px
+        
+input[type="text"]:not(.b-cabinet-info__user-date),
+input[type="password"]
+    font-size 14px
+    width 100%
+    border 1px solid #539cef
+    padding 10px
+    font-family : $fonts.headings
+    font-weight 500
+textarea
+    font-size 14px
+    width 100%
+    border 1px solid #539cef
+    padding 10px
+    min-height 160px
+
+.jq-selectbox.jqselect.dropup.opened
+    .jq-selectbox__trigger
+        transform rotate(-90deg)
+
+.jq-selectbox.jqselect.dropdown.opened
+    .jq-selectbox__trigger
+        transform rotate(90deg)
+
+.jq-selectbox 
+    li
+        padding 15px 10px 15px
+
+.jq-selectbox__select
+    font-size 14px
+    width 100%
+    border 1px solid #539cef
+    border-radius 0
+    padding 10px
+
+.jq-selectbox__trigger
+    top 50%
+    right 18px
+    margin-top -7px
+    width 0
+    height 0
+    border-style solid
+    border-width 6.5px 0 6.5px 7px
+    border-color transparent transparent transparent #008ed7
+    transition transform .2s
+
+.jq-selectbox__dropdown
+    margin 0
+    border 1px solid #539cef
+    border-radius 0
+    box-shadow none
+    
+
+.jq-selectbox li:hover, 
+.jq-selectbox li:focus
+    background-color #12a1b7

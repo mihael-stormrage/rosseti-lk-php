@@ -1,0 +1,17 @@
+<div block="b-form-checkbox" mods="type2">
+    <div elem="section">
+        <div elem="title">Goals</div>
+        <div elem="form">
+            <div elem="items">
+                {% for item in bFormCheckbox_type2 %}    
+                <div elem="item">
+                    <label elem="label">
+                        <span elem="name">{{item.name}}</span>
+                        <input type="checkbox" name="" id="">
+                    </label><!-- e:label -->
+                </div><!-- e:item -->
+                {% endfor %}
+            </div><!-- e:items -->
+        </div><!-- e:form -->
+    </div><!-- e:section -->
+</div><!-- b:b-form-checkbox -->

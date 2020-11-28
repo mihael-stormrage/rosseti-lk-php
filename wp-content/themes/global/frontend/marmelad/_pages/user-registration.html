@@ -1,0 +1,25 @@
+= yaml =
+pageTitle: Регистрация Пользователя
+bodyMods: user-registration
+bodyClasses: ''
+scrollFixClasses: ''
+contentClasses: 'container'
+asideLeft: false
+asideRight: false
+layout: !!map
+    header : true
+    footer : true
+    left : false
+    right : false
+= yaml =
+
+{% extends '_layout.html' %}
+
+{% block main %}
+
+    {% set mainTitleH1 = 'Регистрация Пользователя' %}
+    {% include "main-title.html" %}
+
+    {% include "to-register.html" %}
+
+{% endblock %}

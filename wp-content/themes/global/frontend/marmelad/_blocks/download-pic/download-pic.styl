@@ -1,0 +1,114 @@
+.download-pic
+
+    &__items
+        width 350px
+        max-width 100%
+
+        @media screen and (max-width 959px)
+            width 100%
+            display flex
+            justify-content space-between
+
+        @media screen and (max-width 610px)    
+            flex-direction column
+            align-items center
+    &__item
+        text-align right
+        margin-bottom 35px
+
+        @media screen and (max-width 480px)
+            margin-bottom 10px
+
+    &__title
+        font-size 14px
+        color #333
+        font-weight 400
+        margin-bottom 10px
+        text-align left
+
+    &__img-aria
+        width 351px
+        max-width 100%
+        height 267px
+        border-radius 20px
+        border 1px solid #008ed7
+        background-color #ebf8f8
+        margin-bottom 5px
+        overflow hidden
+        position relative
+        transition background-color .3s
+        &:hover
+            background-color #008ed7
+
+        img
+            max-width 100%
+            position absolute
+            top 0
+            left 0
+
+        @media screen and (max-width 959px)
+            width 251px
+            height 167px
+
+    &__image-preview
+        width 351px
+        max-width 100%
+        height 100%
+        background-size contain !important
+        background-repeat no-repeat !important
+        position relative
+
+        label
+            display block
+            width 100%
+            height 100%
+            margin-bottom 0
+            font-size 0
+            cursor pointer
+        
+        &.show-preview
+            background-color #ebf8f8
+            
+
+    &__image-file
+        display none
+
+    &__btn-download
+        font-size 14px
+        color #008ed7
+        font-weight 400
+        text-transform uppercase
+        text-decoration underline
+        text-align right
+        border none 
+        background-color transparent
+        cursor pointer
+        &:hover
+            text-decoration none
+
+    &--user
+        margin-bottom 145px
+
+        @media screen and (max-width 1023px)
+            margin-bottom 0px
+
+        & ^[0]
+
+            &__items
+                width 300px    
+
+            &__img-aria
+                width 300px
+                height 284px
+                overflow hidden
+
+                @media screen and (max-width 1023px)
+                    height auto
+
+                @media screen and (max-width 959px)
+                    width 250px   
+            
+            &__image-preview
+                @media screen and (max-width 1023px)      
+                    height 190px
+                

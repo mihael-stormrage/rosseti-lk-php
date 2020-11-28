@@ -1,0 +1,210 @@
+.app-header
+    flex none
+    background #fff
+    padding-bottom 10px
+    @media all and (max-width 1024px)
+        margin-top 60px
+        background #fff 
+        padding-bottom 30px
+    &__wrap 
+        display flex 
+        justify-content space-between 
+        padding-top 0px
+        @media all and (max-width 425px)
+            flex-direction column
+    &__header-logo 
+        padding-top 20px 
+        position relative
+
+        a
+            width 162px
+            display block
+            text-decoration none
+            font-size 0
+            
+            img
+                max-width 100%
+                
+        @media all and (max-width 425px)
+            display flex 
+            justify-content center
+    &__menu 
+        ul 
+            list-style-type none 
+            margin 0 
+            padding 0px 0 0 0  
+            display flex 
+            position relative
+            li 
+                transition opacity 0.3s, z-index 0.3s ease
+                position relative
+                a 
+                    padding 60px 20px 0 20px 
+                    color #333333
+                    font-family : 'Open Sans', sans-serif
+                    font-size 16px
+                    font-weight 400
+                    line-height 1
+                    text-transform uppercase
+                    display inline-block
+                    text-decoration none
+                    position relative 
+                    vertical-align middle 
+                    -webkit-transform perspective(1px) translateZ(0)
+                    transform perspective(1px) translateZ(0)
+                    box-shadow 0 0 1px rgba(0, 0, 0, 0)
+                    position relative
+                    overflow hidden
+                    &:before
+                        content ""
+                        position absolute
+                        z-index -1
+                        left 51%
+                        right 51%
+                        top 0
+                        background  #12a1b7
+                        height 5px 
+                        border-radius 4px
+                        -webkit-transition-property left, right
+                        transition-property left, right
+                        -webkit-transition-duration 0.3s
+                        transition-duration 0.3s
+                        -webkit-transition-timing-function ease-out
+                        webkit-transition-timing-function ease-out
+                    &.hovertop
+                        &:before 
+                            left 0 
+                            right 0
+                    &:hover
+                        &:before
+                            left 0
+                            right 0
+                &:first-child 
+                    a 
+                        letter-spacing 0.1px
+                > span 
+                    position absolute
+                    top 100%
+                    left 0
+                    background #fff
+                    z-index -2
+                    opacity 0
+                    min-width 261px
+                    height 24px
+                    transform translateX(-30%)
+                > ul
+                    position absolute
+                    top calc(100% + 24px) 
+                    left 0
+                    background #fff
+                    z-index -2
+                    display flex 
+                    flex-direction column
+                    justify-content center
+                    padding 0 15px
+                    margin 0
+                    opacity 0
+                    min-width 261px
+                    transition opacity 0.3s
+                    border 1px solid #77e0fe
+                    transform translateX(-30%)
+                    > li 
+                        padding 10px 0px 9px 0px
+                        border-bottom 1px solid #77e0fe
+                        text-align center
+                        &:last-child 
+                            border none
+                        > a 
+                            padding-top 0
+                            &:before
+                                display none
+                        &:hover
+                            background #fff
+                            // .app-header__menu ul li a:before
+                            //     left 0
+                            //     right 0
+                &:hover
+                    > ul 
+                        opacity 1
+                        z-index 2
+                    > span 
+                        opacity 1 
+                        z-index 2    
+                    &:before 
+                        transform rotate(90deg)                
+        @media all and (max-width 1024px)
+            display none  
+    &__hasChild 
+        position relative 
+        &:before
+            content "" 
+            position absolute 
+            top 60px    
+            right 0
+            width 7px 
+            height 13px 
+            border-style solid
+            border-width 6.5px 0 6.5px 7px
+            border-color transparent transparent transparent #008ed7
+            transition all 0.3s ease     
+    &__details 
+        padding-top 25px
+        display flex 
+        flex-direction column 
+        @media all and (max-width 1024px)
+            display none
+    &__cabinet 
+        text-align right 
+        a 
+            color #008ed7
+            font-family : 'Open Sans', sans-serif
+            font-size 16px
+            font-weight 400
+            line-height 19.45px
+            text-transform uppercase
+            letter-spacing 0.24px  
+            text-decoration none 
+            &:hover 
+                text-decoration none
+        @media all and (max-width 425px)
+            display flex 
+            text-align center
+            justify-content center
+    &__log-reg 
+        padding-top 0px 
+        margin-left -20px
+        display flex 
+        @media all and (max-width 500px)
+            flex-wrap wrap
+            justify-content flex-end
+        @media all and (max-width 425px)
+            justify-content center
+            text-align center 
+            flex-direction column
+    &__login 
+        margin-left 20px
+        a  
+            color #333333
+            font-family : 'Open Sans', sans-serif
+            font-size 16px
+            font-weight 400
+            line-height 19.45px
+            text-decoration underline
+            text-transform uppercase
+            letter-spacing 0.24px
+            &:hover 
+                text-decoration none
+    &__registr 
+        margin-left 20px
+        a  
+            color #333333
+            font-family : 'Open Sans', sans-serif
+            font-size 16px
+            font-weight 400
+            line-height 19.45px
+            text-decoration underline
+            text-transform uppercase
+            letter-spacing 0.24px
+            &:hover 
+                text-decoration none
+        

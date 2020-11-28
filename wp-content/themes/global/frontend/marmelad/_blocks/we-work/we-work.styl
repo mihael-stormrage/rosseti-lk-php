@@ -1,0 +1,87 @@
+.we-work
+    margin-bottom 60px
+
+    @media screen and (max-width 645px)
+        margin-bottom 15px
+
+    &__section
+        display flex
+        width 820px
+        max-width 100%
+        margin 0 auto
+
+        @media screen and (max-width 645px)
+            flex-direction column
+            align-items center
+
+    &__icon
+        width 202px
+        height 230px
+        margin-right 95px
+        position relative
+
+        @media screen and (max-width 645px)
+            margin-right 0
+
+        @media screen and (max-width 480px)
+            width 175px
+            height 200px
+
+        img
+            position relative
+            z-index 1
+
+            @media screen and (max-width 480px)
+                max-width 100%
+
+        &:before
+            content ''
+            position absolute
+            top 42px
+            left 14px
+            width 84px
+            height 79px
+            border-radius 18px
+            background-color rgba(0,168,184,0.188)
+        &:after
+            content ''
+            position absolute
+            right 2px
+            bottom 20px
+            width 122px
+            height 114px
+            border-radius 18px
+            background-color rgba(0,168,184,0.188)  
+
+    &__body
+        width 520px
+        max-width 100%
+        padding-top 5px 
+
+    &__title
+        font-size 43px
+        font-family : $fonts.headings
+        color #13232a
+        font-weight 500
+        line-height 1.2 
+        margin-bottom 30px
+        
+        @media screen and (max-width 645px)
+            font-size 36px
+            text-align center
+
+        @media screen and (max-width 480px)
+            margin-bottom 15px    
+    
+    &__desc
+        font-size 14px
+        color #333
+        font-weight 600
+        line-height 1.8
+        padding-right 80px
+
+        p
+            margin-bottom 10px
+
+        @media screen and (max-width 645px)
+            padding-right 0

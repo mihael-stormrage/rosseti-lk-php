@@ -1,0 +1,25 @@
+<div block="b-news" class="site-width">
+    <div elem="items">
+        {% for item in detail %}
+        <div elem="item" class="white-back">
+            {% if item.img | length %}
+            <div elem="item-img">
+                <img src="img/{{item.img}}" alt="">
+            </div>
+            {% endif %}
+            <div elem="item-detail">
+                <div elem="item-data">{{ item.data }}</div>
+                <div elem="item-title">
+                    {{ item.title }}
+                </div>
+                <div elem="item-text">
+                    {{ item.text }}
+                </div>
+                <div elem="item-read-more">
+                    <a href="#">{{item.read}}</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>    
+</div>

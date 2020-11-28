@@ -1,0 +1,12 @@
+<div block="main-title">
+    <div elem="section" class="site-width">
+        {% if pageTitle == 'Main Page' %}
+            <div elem="img"><img src="img/main-pic-mod.jpg" alt=""></div><!-- e:img -->
+        {% endif %}
+
+        {% if pageTitle != 'Main Page' %}
+            <h1>{{mainTitleH1}}</h1>
+        {% endif %}
+
+    </div><!-- e:section -->
+</div><!-- b:main-title -->

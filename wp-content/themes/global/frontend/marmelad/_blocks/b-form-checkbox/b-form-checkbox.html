@@ -1,0 +1,18 @@
+<div block="b-form-checkbox">
+    <div elem="section">
+        <div elem="title">Область идеи</div>
+        <div elem="form">
+            <div elem="items">
+                {% for item in bFormCheckbox %}    
+                <div elem="item">
+                    <label elem="label">
+                        <div elem="icon"><img src="img/{{item.icon}}" alt=""></div>
+                        <span elem="name">{{item.name}}</span>
+                        <input type="checkbox" name="" id="">
+                    </label><!-- e:label -->
+                </div><!-- e:item -->
+                {% endfor %}
+            </div><!-- e:items -->
+        </div><!-- e:form -->
+    </div><!-- e:section -->
+</div><!-- b:b-form-checkbox -->

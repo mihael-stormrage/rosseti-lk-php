@@ -1,0 +1,238 @@
+.b-form__form {
+  flex: 1;
+}
+
+
+
+.mailpoet_text_label, .mailpoet_textarea_label, .mailpoet_select_label, .mailpoet_radio_label, .mailpoet_checkbox_label, .mailpoet_list_label, .mailpoet_date_label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+
+.mailpoet_submit {
+  font-size: 18px;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+  min-width: 205px;
+  text-align: center;
+  display: block;
+  background-color: #13acc3;
+  background-image: linear-gradient(42deg, rgba(11,112,183,0.59) 0%, rgba(11,183,183,0) 100%);
+  border: none;
+  border-radius: 23px;
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  margin-left: auto;
+}
+
+.mailpoet_submit:hover, .mailpoet_submit:focus {
+  background-color: #27d1ea;
+}
+
+.mailpoet_submit:active {
+  background-color: #0f8a9c;
+}
+
+
+.b-form-checkbox__items label {
+  margin-bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  cursor: pointer;
+}
+
+.b-form-checkbox__items span.wpcf7-list-item {
+  margin-left: 0;
+  margin-bottom: 30px;
+}
+
+.b-form-checkbox__items .wpcf7-form-control-wrap {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 100%;
+}
+
+.b-form-checkbox__items .wpcf7-form-control-wrap .wpcf7-form-control {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 100%; 
+}
+
+.b-form-checkbox__items .wpcf7-list-item-label {
+  font-size: 14px;
+  color: #000;
+  font-weight: 400;
+  margin-top: 10px;
+  margin-right: 5px;
+  margin-left: 5px;
+  display: inline-block;
+  vertical-align: top;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 10px;
+}
+
+
+.app .wppb-user-forms input[type="text"],
+.app .wppb-user-forms input[type="number"],
+.app .wppb-user-forms input[type="email"],
+.app .wppb-user-forms input[type="url"],
+.app .wppb-user-forms input[type="password"],
+.app .wppb-user-forms input[type="search"],
+.app .wppb-user-forms textarea {
+  font-size: 14px !important;
+  width: 100% !important;
+  border: 1px solid #539cef !important;
+  padding: 10px !important;
+  font-family: "Oswald", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-weight: 500 !important;
+}
+
+.app .wppb-user-forms label {
+  font-size: 18px !important;
+  color: #333 !important;
+  font-weight: 700 !important;
+  margin-bottom: 10px !important;
+}
+
+.app .wppb-required {
+  display: none !important;
+}
+
+.app .wppb-form-field,
+.app .login-username {
+  padding-bottom: 0 !important;
+  margin-bottom: 35px !important;
+}
+
+.app .login-remember {
+  padding: 0 !important;
+  margin: 10px 0 !important;
+}
+
+.app .wppb-send-credentials-checkbox {
+  display: none !important;
+}
+
+.app .wppb-user-forms .jq-checkbox {
+  margin-right: 8px !important;
+}
+
+.app .wppb-user-forms input[type="submit"] {
+  display: block !important;
+  font-size: 18px !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  text-transform: uppercase !important;
+  min-width: 205px !important;
+  text-align: center !important;
+  display: block !important;
+  background-color: #13acc3 !important;
+  background-image: linear-gradient(42deg, rgba(11,112,183,0.59) 0%, rgba(11,183,183,0) 100%) !important;
+  border: none !important;
+  border-radius: 23px !important;
+  padding: 8px !important;
+  cursor: pointer !important;
+  transition: background-color 0.3s !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  -ms-appearance: none !important;
+  appearance: none !important;
+  margin-left: auto !important;
+  width: 304px !important;
+  max-width: 100% !important;
+  
+}
+
+.b-cabinet-save {
+  margin: 20px 0 35px;
+}
+
+
+.b-cabinet-info__item button[type="submit"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.b-cabinet-info__item.is-changed button[type="submit"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto; 
+}
+
+.download-pic__img-aria img {
+  margin: 0;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+}
+
+.download-pic__image-preview {
+  background-size: 100% auto !important;
+}
+
+
+.info-materials__tab {
+  display: none;
+}
+
+.info-materials__tab.active-info {
+  display: block;
+}
+
+.info-materials__item--post_types {
+  margin-bottom: 0;
+}
+
+.info-materials__checkbox {
+  margin-bottom: 45px;
+}
+
+@media only screen and (max-width: 480px) {
+  .info-materials__checkbox {
+    margin-bottom: 15px;
+  }
+}
+
+.info-materials__preview-post.is-hidden {
+  display: none;
+}
+
+.info-materials__preview-post-status {
+  display: none;
+}
+
+.info-materials__preview-post-status.active-info {
+  display: block;
+}
+
+.info-materials__preview-post-status.active-info .info-materials__preview-post {
+  display: block;
+}
+
+.info-materials__preview-post-status .info-materials__preview-post ~ .info-materials__no-posts {
+  display: none;
+}
+
+/*
+.info-materials__preview-post {
+  display: none;
+}*/

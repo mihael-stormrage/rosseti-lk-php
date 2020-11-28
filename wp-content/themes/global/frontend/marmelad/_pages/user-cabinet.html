@@ -1,0 +1,25 @@
+= yaml =
+pageTitle: Личный кабинет пользователя
+bodyMods: user-cabinet
+bodyClasses: ''
+scrollFixClasses: ''
+contentClasses: 'container'
+asideLeft: false
+asideRight: false
+layout: !!map
+    header : true
+    footer : true
+    left : false
+    right : false
+= yaml =
+
+{% extends '_layout.html' %}
+
+{% block main %}
+
+    {% set mainTitleH1 = 'Личный кабинет пользователя' %}
+    {% include "main-title.html" %}
+
+    {% include "wrp-content.html" %}
+
+{% endblock %}

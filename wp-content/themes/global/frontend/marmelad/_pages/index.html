@@ -1,0 +1,28 @@
+= yaml =
+pageTitle: Main Page
+bodyMods: main
+bodyClasses: ''
+scrollFixClasses: ''
+contentClasses: 'container'
+asideLeft: false
+asideRight: false
+layout: !!map
+    header : true
+    footer : true
+    left : false
+    right : false
+= yaml =
+
+{% extends '_layout.html' %}
+
+{% block main %}
+
+    {% set mainTitleH1 = 'H1 Заголовок' %}
+    {% include "main-title.html" %}
+    {% include "wrp-content.html" %}
+
+    {% set bFormTilte = 'Подписаться на журнал' %}
+    {% set bFormText = 'Друзья, Мы поддерживаем развитие Талантов во всём Мире! Cейчас Мы первые в Мире покупаем Идеи на любой стадии!' %}
+    {% include "b-form.html" %}
+
+{% endblock %}
