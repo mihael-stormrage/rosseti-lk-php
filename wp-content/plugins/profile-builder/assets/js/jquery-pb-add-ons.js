@@ -24,7 +24,7 @@ jQuery('.wppb-add-on .button').on( 'click', function(e) {
 /*
  * Make deactivate button from Add-On is Active message button
  */
-jQuery('.wppb-add-on').on( 'hover', function() {
+jQuery('.wppb-add-on').on( 'mouseenter mouseleave', function() {
 
     $button = jQuery(this).find('.wppb-add-on-deactivate');
 

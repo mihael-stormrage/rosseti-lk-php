@@ -1,30 +1,32 @@
 <?php
+
 namespace MailPoet\Newsletter\Editor;
 
+if (!defined('ABSPATH')) exit;
+
+
 class LayoutHelper {
-  static function row($blocks) {
-    return array(
+  public static function row($blocks, $styles = []) {
+    if (empty($styles['backgroundColor'])) {
+      $styles['backgroundColor'] = 'transparent';
+    }
+    return [
       'type' => 'container',
       'orientation' => 'horizontal',
-      'styles' => array(
-        'block' => array(
-          'backgroundColor' => 'transparent'
-        )
-      ),
-      'blocks' => $blocks
-    );
+      'styles' => ['block' => $styles],
+      'blocks' => $blocks,
+    ];
   }
 
-  static function col($blocks) {
-    return array(
+  public static function col($blocks, $styles = []) {
+    if (empty($styles['backgroundColor'])) {
+      $styles['backgroundColor'] = 'transparent';
+    }
+    return [
       'type' => 'container',
       'orientation' => 'vertical',
-      'styles' => array(
-        'block' => array(
-          'backgroundColor' => 'transparent'
-        )
-      ),
-      'blocks' => $blocks
-    );
+      'styles' => ['block' => $styles],
+      'blocks' => $blocks,
+    ];
   }
 }

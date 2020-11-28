@@ -2,92 +2,95 @@
 
 namespace MailPoet\API\JSON\v1;
 
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\API\JSON\Endpoint as APIEndpoint;
 use MailPoet\Config\AccessControl;
-use MailPoet\WP\Hooks;
+use MailPoet\WP\Functions as WPFunctions;
 use MailPoet\WP\Posts as WPPosts;
-
-if(!defined('ABSPATH')) exit;
 
 class AutomatedLatestContent extends APIEndpoint {
   /** @var \MailPoet\Newsletter\AutomatedLatestContent  */
   public $ALC;
-  public $permissions = array(
-    'global' => AccessControl::PERMISSION_MANAGE_EMAILS
-  );
+  private $wp;
+  public $permissions = [
+    'global' => AccessControl::PERMISSION_MANAGE_EMAILS,
+  ];
 
-  function __construct(\MailPoet\Newsletter\AutomatedLatestContent $alc) {
+  public function __construct(\MailPoet\Newsletter\AutomatedLatestContent $alc, WPFunctions $wp) {
     $this->ALC = $alc;
+    $this->wp = $wp;
   }
 
-  function getPostTypes() {
-    $post_types = array_map(function($post_type) {
-      return array(
-        'name' => $post_type->name,
-        'label' => $post_type->label
-      );
-    }, WPPosts::getTypes(array(), 'objects'));
+  public function getPostTypes() {
+    $postTypes = array_map(function($postType) {
+      return [
+        'name' => $postType->name,
+        'label' => $postType->label,
+      ];
+    }, WPPosts::getTypes([], 'objects'));
     return $this->successResponse(
-      array_filter($post_types)
+      array_filter($postTypes)
     );
   }
 
-  function getTaxonomies($data = array()) {
-    $post_type = (isset($data['postType'])) ? $data['postType'] : 'post';
-    $all_taxonomies = get_object_taxonomies($post_type, 'objects');
-    $taxonomies_with_label = array_filter($all_taxonomies, function($taxonomy) {
+  public function getTaxonomies($data = []) {
+    $postType = (isset($data['postType'])) ? $data['postType'] : 'post';
+    $allTaxonomies = WPFunctions::get()->getObjectTaxonomies($postType, 'objects');
+    $taxonomiesWithLabel = array_filter($allTaxonomies, function($taxonomy) {
       return $taxonomy->label;
     });
-    return $this->successResponse($taxonomies_with_label);
+    return $this->successResponse($taxonomiesWithLabel);
   }
 
-  function getTerms($data = array()) {
-    $taxonomies = (isset($data['taxonomies'])) ? $data['taxonomies'] : array();
+  public function getTerms($data = []) {
+    $taxonomies = (isset($data['taxonomies'])) ? $data['taxonomies'] : [];
     $search = (isset($data['search'])) ? $data['search'] : '';
     $limit = (isset($data['limit'])) ? (int)$data['limit'] : 100;
     $page = (isset($data['page'])) ? (int)$data['page'] : 1;
-    $args = array(
+    $args = [
       'taxonomy' => $taxonomies,
       'hide_empty' => false,
       'search' => $search,
       'number' => $limit,
       'offset' => $limit * ($page - 1),
       'orderby' => 'name',
-      'order' => 'ASC'
-    );
+      'order' => 'ASC',
+    ];
 
-    $args = Hooks::applyFilters('mailpoet_search_terms_args', $args);
+    $args = $this->wp->applyFilters('mailpoet_search_terms_args', $args);
     $terms = WPPosts::getTerms($args);
 
     return $this->successResponse(array_values($terms));
   }
 
-  function getPosts($data = array()) {
+  public function getPosts($data = []) {
     return $this->successResponse(
       $this->ALC->getPosts($data)
     );
   }
 
-  function getTransformedPosts($data = array()) {
+  public function getTransformedPosts($data = []) {
     $posts = $this->ALC->getPosts($data);
     return $this->successResponse(
       $this->ALC->transformPosts($data, $posts)
     );
   }
 
-  function getBulkTransformedPosts($data = array()) {
-    $used_posts = array();
-    $rendered_posts = array();
+  public function getBulkTransformedPosts($data = []) {
+    $usedPosts = [];
+    $renderedPosts = [];
 
-    foreach($data['blocks'] as $block) {
-      $posts = $this->ALC->getPosts($block, $used_posts);
-      $rendered_posts[] = $this->ALC->transformPosts($block, $posts);
+    foreach ($data['blocks'] as $block) {
+      $posts = $this->ALC->getPosts($block, $usedPosts);
+      $renderedPosts[] = $this->ALC->transformPosts($block, $posts);
 
-      foreach($posts as $post) {
-        $used_posts[] = $post->ID;
+      foreach ($posts as $post) {
+        $usedPosts[] = $post->ID;
       }
     }
 
-    return $this->successResponse($rendered_posts);
+    return $this->successResponse($renderedPosts);
   }
 }

@@ -2,87 +2,112 @@
 
 namespace MailPoet\Twig;
 
-if(!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit;
 
-class Assets extends \Twig_Extension {
-  const CDN_URL = 'https://ps.w.org/mailpoet/';
-  private $_globals;
 
-  function __construct($globals) {
-    $this->_globals = $globals;
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\Util\CdnAssetUrl;
+use MailPoet\WP\Functions as WPFunctions;
+use MailPoetVendor\Twig\Extension\AbstractExtension;
+use MailPoetVendor\Twig\TwigFunction;
+
+class Assets extends AbstractExtension {
+  private $globals;
+
+  /** @var CdnAssetUrl */
+  private $cdnAssetsUrl;
+
+  public function __construct(array $globals, CdnAssetUrl $cdnAssetsUrl = null) {
+    $this->globals = $globals;
+    if ($cdnAssetsUrl === null) {
+      $cdnAssetsUrl = ContainerWrapper::getInstance()->get(CdnAssetUrl::class);
+    }
+    $this->cdnAssetsUrl = $cdnAssetsUrl;
   }
 
-  function getFunctions() {
-    return array(
-      new \Twig_SimpleFunction(
+  public function getFunctions() {
+    return [
+      new TwigFunction(
         'stylesheet',
-        array($this, 'generateStylesheet'),
-        array('is_safe' => array('all'))
+        [$this, 'generateStylesheet'],
+        ['is_safe' => ['all']]
       ),
-      new \Twig_SimpleFunction(
+      new TwigFunction(
         'javascript',
-        array($this, 'generateJavascript'),
-        array('is_safe' => array('all'))
+        [$this, 'generateJavascript'],
+        ['is_safe' => ['all']]
       ),
-      new \Twig_SimpleFunction(
+      new TwigFunction(
+        'getJavascriptScriptUrl',
+        [$this, 'getJavascriptScriptUrl'],
+        ['is_safe' => ['all']]
+      ),
+      new TwigFunction(
         'image_url',
-        array($this, 'generateImageUrl'),
-        array('is_safe' => array('all'))
+        [$this, 'generateImageUrl'],
+        ['is_safe' => ['all']]
       ),
-      new \Twig_SimpleFunction(
+      new TwigFunction(
         'cdn_url',
-        array($this, 'generateCdnUrl'),
-        array('is_safe' => array('all'))
-      )
-    );
+        [$this, 'generateCdnUrl'],
+        ['is_safe' => ['all']]
+      ),
+    ];
   }
 
-  function generateStylesheet() {
+  public function generateStylesheet() {
     $stylesheets = func_get_args();
-    $output = array();
+    $output = [];
 
-    foreach($stylesheets as $stylesheet) {
+    foreach ($stylesheets as $stylesheet) {
       $output[] = sprintf(
-        '<link rel="stylesheet" type="text/css" href="%s/css/%s" />',
-        $this->_globals['assets_url'],
-        $this->getAssetFilename($this->_globals['assets_manifest_css'], $stylesheet)
+        '<link rel="stylesheet" type="text/css" href="%s/dist/css/%s" />',
+        $this->globals['assets_url'],
+        $this->getAssetFilename($this->globals['assets_manifest_css'], $stylesheet)
       );
     }
 
     return join("\n", $output);
   }
 
-  function generateJavascript() {
+  public function generateJavascript() {
     $scripts = func_get_args();
-    $output = array();
+    $output = [];
 
-    foreach($scripts as $script) {
+    foreach ($scripts as $script) {
       $output[] = sprintf(
-        '<script type="text/javascript" src="%s/js/%s"></script>',
-        $this->_globals['assets_url'],
-        $this->getAssetFilename($this->_globals['assets_manifest_js'], $script)
+        '<script type="text/javascript" src="%s"></script>',
+        $this->getJavascriptScriptUrl($script)
       );
     }
 
     return join("\n", $output);
   }
 
-  function generateImageUrl($path) {
-    return $this->appendVersionToUrl(
-      $this->_globals['assets_url'] . '/img/' . $path
+  public function getJavascriptScriptUrl($script) {
+    return sprintf(
+      '%s/%s/%s',
+      $this->globals['assets_url'],
+      strpos($script, 'lib/') === 0 ? 'js' : 'dist/js',
+      $this->getAssetFileName($this->globals['assets_manifest_js'], $script)
     );
   }
 
-  function appendVersionToUrl($url) {
-    return add_query_arg('mailpoet_version', $this->_globals['version'], $url);
+  public function generateImageUrl($path) {
+    return $this->appendVersionToUrl(
+      $this->globals['assets_url'] . '/img/' . $path
+    );
   }
 
-  function getAssetFileName($manifest, $asset) {
+  public function appendVersionToUrl($url) {
+    return WPFunctions::get()->addQueryArg('mailpoet_version', $this->globals['version'], $url);
+  }
+
+  public function getAssetFileName($manifest, $asset) {
     return (!empty($manifest[$asset])) ? $manifest[$asset] : $asset;
   }
 
-  function generateCdnUrl($path) {
-    $useCdn = defined('MAILPOET_USE_CDN') ? MAILPOET_USE_CDN : true;
-    return ($useCdn ? self::CDN_URL : $this->_globals['base_url'] . '/plugin_repository/') . "assets/$path";
+  public function generateCdnUrl($path) {
+    return $this->cdnAssetsUrl->generateCdnUrl($path);
   }
 }

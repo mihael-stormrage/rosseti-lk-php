@@ -1,15 +1,20 @@
 <?php
+
 namespace MailPoet\Models;
 
-if(!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit;
 
+
+/**
+ * @property string|null $sentAt
+ */
 class StatisticsNewsletters extends Model {
-  public static $_table = MP_STATISTICS_NEWSLETTERS_TABLE;
+  public static $_table = MP_STATISTICS_NEWSLETTERS_TABLE; // phpcs:ignore PSR2.Classes.PropertyDeclaration
 
-  static function createMultiple(array $data) {
-    $values = array();
-    foreach($data as $value) {
-      if(!empty($value['newsletter_id']) &&
+  public static function createMultiple(array $data) {
+    $values = [];
+    foreach ($data as $value) {
+      if (!empty($value['newsletter_id']) &&
          !empty($value['subscriber_id']) &&
          !empty($value['queue_id'])
       ) {
@@ -30,15 +35,15 @@ class StatisticsNewsletters extends Model {
     );
   }
 
-  static function getAllForSubscriber(Subscriber $subscriber) {
-    return static::table_alias('statistics')
+  public static function getAllForSubscriber(Subscriber $subscriber) {
+    return static::tableAlias('statistics')
       ->select('statistics.newsletter_id', 'newsletter_id')
       ->select('newsletter_rendered_subject')
       ->select('opens.created_at', 'opened_at')
       ->select('sent_at')
       ->join(
         SendingQueue::$_table,
-        array('statistics.queue_id', '=', 'queue.id'),
+        ['statistics.queue_id', '=', 'queue.id'],
         'queue'
       )
       ->leftOuterJoin(

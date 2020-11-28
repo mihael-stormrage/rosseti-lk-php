@@ -1,7 +1,2 @@
 <?php
-
-namespace MailPoetVendor\Psr\Log;
-
-class InvalidArgumentException extends \InvalidArgumentException
-{
-}
+ namespace MailPoetVendor\Psr\Log; if (!defined('ABSPATH')) exit; class InvalidArgumentException extends \InvalidArgumentException { } 

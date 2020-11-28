@@ -1,8 +1,12 @@
 <?php
+
 namespace MailPoet\Newsletter\Renderer;
 
+if (!defined('ABSPATH')) exit;
+
+
 class StylesHelper {
-  static $css_attributes = [
+  public static $cssAttributes = [
     'backgroundColor' => 'background-color',
     'fontColor' => 'color',
     'fontFamily' => 'font-family',
@@ -16,7 +20,7 @@ class StylesHelper {
     'borderRadius' => 'border-radius',
     'lineHeight' => 'line-height',
   ];
-  static $font = [
+  public static $font = [
     'Arial' => "Arial, 'Helvetica Neue', Helvetica, sans-serif",
     'Comic Sans MS' => "'Comic Sans MS', 'Marker Felt-Thin', Arial, sans-serif",
     'Courier New' => "'Courier New', Courier, 'Lucida Sans Typewriter', 'Lucida Typewriter', monospace",
@@ -36,8 +40,12 @@ class StylesHelper {
     'Playfair Display' => "'playfair display', georgia, 'times new roman', serif",
     'Roboto' => "roboto, 'helvetica neue', helvetica, arial, sans-serif",
     'Source Sans Pro' => "'source sans pro', 'helvetica neue', helvetica, arial, sans-serif",
+    'Oswald' => "Oswald, 'Trebuchet MS', 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', Tahoma, sans-serif",
+    'Raleway' => "Raleway, 'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
+    'Permanent Marker' => "'Permanent Marker', Tahoma, Verdana, Segoe, sans-serif",
+    'Pacifico' => "Pacifico, 'Arial Narrow', Arial, sans-serif",
   ];
-  static $custom_fonts = [
+  public static $customFonts = [
     'Arvo',
     'Lato',
     'Lora',
@@ -48,52 +56,56 @@ class StylesHelper {
     'Playfair Display',
     'Roboto',
     'Source Sans Pro',
+    'Oswald',
+    'Raleway',
+    'Permanent Marker',
+    'Pacifico',
   ];
-  static $line_height_multiplier = 1.6;
-  static $heading_margin_multiplier = 0.3;
-  static $padding_width = 20;
+  public static $defaultLineHeight = 1.6;
+  public static $headingMarginMultiplier = 0.3;
+  public static $paddingWidth = 20;
 
-  static function getBlockStyles($element, $ignore_specific_styles = false) {
-    if(!isset($element['styles']['block'])) {
+  public static function getBlockStyles($element, $ignoreSpecificStyles = false) {
+    if (!isset($element['styles']['block'])) {
       return;
     }
-    return self::getStyles($element['styles'], 'block', $ignore_specific_styles);
+    return self::getStyles($element['styles'], 'block', $ignoreSpecificStyles);
   }
 
-  static function getStyles($data, $type, $ignore_specific_styles = false) {
-    $styles = array_map(function($attribute, $style) use ($ignore_specific_styles) {
-      if(!$ignore_specific_styles || !in_array($attribute, $ignore_specific_styles)) {
+  public static function getStyles($data, $type, $ignoreSpecificStyles = false) {
+    $styles = array_map(function($attribute, $style) use ($ignoreSpecificStyles) {
+      if (!$ignoreSpecificStyles || !in_array($attribute, $ignoreSpecificStyles)) {
         $style = StylesHelper::applyFontFamily($attribute, $style);
-        return StylesHelper::translateCSSAttribute($attribute) . ': ' . $style . ' !important;';
+        return StylesHelper::translateCSSAttribute($attribute) . ': ' . $style . ';';
       }
     }, array_keys($data[$type]), $data[$type]);
     return implode('', $styles);
   }
 
-  static function translateCSSAttribute($attribute) {
-    return (array_key_exists($attribute, self::$css_attributes)) ?
-      self::$css_attributes[$attribute] :
+  public static function translateCSSAttribute($attribute) {
+    return (array_key_exists($attribute, self::$cssAttributes)) ?
+      self::$cssAttributes[$attribute] :
       $attribute;
   }
 
-  static function setStyle($style, $selector) {
+  public static function setStyle($style, $selector) {
     $css = $selector . '{' . PHP_EOL;
     $style = self::applyHeadingMargin($style, $selector);
     $style = self::applyLineHeight($style, $selector);
-    foreach($style as $attribute => $individual_style) {
-      $individual_style = self::applyFontFamily($attribute, $individual_style);
-      $css .= self::translateCSSAttribute($attribute) . ':' . $individual_style . ';' . PHP_EOL;
+    foreach ($style as $attribute => $individualStyle) {
+      $individualStyle = self::applyFontFamily($attribute, $individualStyle);
+      $css .= self::translateCSSAttribute($attribute) . ':' . $individualStyle . ';' . PHP_EOL;
     }
     $css .= '}' . PHP_EOL;
     return $css;
   }
 
-  static function applyTextAlignment($block) {
-    if(is_array($block)) {
-      $text_alignment = isset($block['styles']['block']['textAlign']) ?
+  public static function applyTextAlignment($block) {
+    if (is_array($block)) {
+      $textAlignment = isset($block['styles']['block']['textAlign']) ?
         strtolower($block['styles']['block']['textAlign']) :
-        false;
-      if(preg_match('/center|right|justify/i', $text_alignment)) {
+        '';
+      if (preg_match('/center|right|justify/i', $textAlignment)) {
         return $block;
       }
       $block['styles']['block']['textAlign'] = 'left';
@@ -104,47 +116,50 @@ class StylesHelper {
       $block . 'text-align:left;';
   }
 
-  static function applyFontFamily($attribute, $style) {
-    if($attribute !== 'fontFamily') return $style;
+  public static function applyFontFamily($attribute, $style) {
+    if ($attribute !== 'fontFamily') return $style;
     return (isset(self::$font[$style])) ?
         self::$font[$style] :
         self::$font['Arial'];
   }
 
-  static function applyHeadingMargin($style, $selector) {
-    if(!preg_match('/h[1-4]/i', $selector)) return $style;
-    $font_size = (int)$style['fontSize'];
-    $style['margin'] = sprintf('0 0 %spx 0', self::$heading_margin_multiplier * $font_size);
+  public static function applyHeadingMargin($style, $selector) {
+    if (!preg_match('/h[1-4]/i', $selector)) return $style;
+    $fontSize = (int)$style['fontSize'];
+    $style['margin'] = sprintf('0 0 %spx 0', self::$headingMarginMultiplier * $fontSize);
     return $style;
   }
 
-  static function applyLineHeight($style, $selector) {
-    if(!preg_match('/mailpoet_paragraph|h[1-4]/i', $selector)) return $style;
-    $font_size = (int)$style['fontSize'];
-    $style['lineHeight'] = sprintf('%spx', self::$line_height_multiplier * $font_size);
+  public static function applyLineHeight($style, $selector) {
+    if (!preg_match('/mailpoet_paragraph|h[1-4]/i', $selector)) return $style;
+    $lineHeight = isset($style['lineHeight']) ? (float)$style['lineHeight'] : self::$defaultLineHeight;
+    $fontSize = (int)$style['fontSize'];
+    $style['lineHeight'] = sprintf('%spx', $lineHeight * $fontSize);
     return $style;
   }
 
   private static function getCustomFontsNames($styles) {
-    $font_names = [];
-    foreach($styles as $style) {
-      if(isset($style['fontFamily']) && in_array($style['fontFamily'], self::$custom_fonts)) {
-        $font_names[$style['fontFamily']] = true;
+    $fontNames = [];
+    foreach ($styles as $style) {
+      if (isset($style['fontFamily']) && in_array($style['fontFamily'], self::$customFonts)) {
+        $fontNames[$style['fontFamily']] = true;
       }
     }
-    return array_keys($font_names);
+    return array_keys($fontNames);
   }
 
-  static function getCustomFontsLinks($styles) {
+  public static function getCustomFontsLinks($styles) {
     $links = [];
-    foreach(self::getCustomFontsNames($styles) as $name) {
+    foreach (self::getCustomFontsNames($styles) as $name) {
       $links[] = urlencode($name) . ':400,400i,700,700i';
     }
-    if(!count($links)) { 
+    if (!count($links)) {
       return '';
     }
-    return '<!--[if !mso]><link href="https://fonts.googleapis.com/css?family='
+
+    // see https://stackoverflow.com/a/48214207
+    return '<!--[if !mso]><!-- --><link href="https://fonts.googleapis.com/css?family='
       . implode("|", $links)
-      . '" rel="stylesheet"><![endif]-->';
+      . '" rel="stylesheet"><!--<![endif]-->';
   }
 }

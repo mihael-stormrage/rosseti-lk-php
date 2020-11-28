@@ -1,31 +1,55 @@
 <?php
+
 namespace MailPoet\Cron\Workers\SendingQueue\Tasks;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Logging\LoggerFactory;
 use MailPoet\Models\Newsletter as NewsletterModel;
 use MailPoet\Models\NewsletterPost;
 
-if(!defined('ABSPATH')) exit;
-
 class Posts {
-  static function extractAndSave($rendered_newsletter, $newsletter) {
-    if($newsletter->type !== NewsletterModel::TYPE_NOTIFICATION_HISTORY) {
+  /** @var LoggerFactory */
+  private $loggerFactory;
+
+  public function __construct() {
+    $this->loggerFactory = LoggerFactory::getInstance();
+  }
+
+  public function extractAndSave($renderedNewsletter, $newsletter) {
+    if ($newsletter->type !== NewsletterModel::TYPE_NOTIFICATION_HISTORY) {
       return false;
     }
+    $this->loggerFactory->getLogger(LoggerFactory::TOPIC_POST_NOTIFICATIONS)->addInfo(
+      'extract and save posts - before',
+      ['newsletter_id' => $newsletter->id]
+    );
     preg_match_all(
       '/data-post-id="(\d+)"/ism',
-      $rendered_newsletter['html'],
-      $matched_posts_ids);
-    $matched_posts_ids = $matched_posts_ids[1];
-    if(!count($matched_posts_ids)) {
+      $renderedNewsletter['html'],
+      $matchedPostsIds);
+    $matchedPostsIds = $matchedPostsIds[1];
+    if (!count($matchedPostsIds)) {
       return false;
     }
-    $newsletter_id = $newsletter->parent_id; // parent post notification
-    foreach($matched_posts_ids as $post_id) {
-      $newsletter_post = NewsletterPost::create();
-      $newsletter_post->newsletter_id = $newsletter_id;
-      $newsletter_post->post_id = $post_id;
-      $newsletter_post->save();
+    $newsletterId = $newsletter->parentId; // parent post notification
+    foreach ($matchedPostsIds as $postId) {
+      $newsletterPost = NewsletterPost::create();
+      $newsletterPost->newsletterId = $newsletterId;
+      $newsletterPost->postId = $postId;
+      $newsletterPost->save();
     }
+    $this->loggerFactory->getLogger(LoggerFactory::TOPIC_POST_NOTIFICATIONS)->addInfo(
+      'extract and save posts - after',
+      ['newsletter_id' => $newsletter->id, 'matched_posts_ids' => $matchedPostsIds]
+    );
     return true;
+  }
+
+  public function getAlcPostsCount($renderedNewsletter, \MailPoet\Models\Newsletter $newsletter) {
+    $templatePostsCount = substr_count($newsletter->getBodyString(), 'data-post-id');
+    $newsletterPostsCount = substr_count($renderedNewsletter['html'], 'data-post-id');
+    return $newsletterPostsCount - $templatePostsCount;
   }
 }

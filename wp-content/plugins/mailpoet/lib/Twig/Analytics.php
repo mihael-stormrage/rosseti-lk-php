@@ -2,35 +2,42 @@
 
 namespace MailPoet\Twig;
 
-use MailPoet\Analytics\Reporter;
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Analytics\Analytics as AnalyticsGenerator;
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\InvalidStateException;
+use MailPoetVendor\Twig\Extension\AbstractExtension;
+use MailPoetVendor\Twig\TwigFunction;
 
-if(!defined('ABSPATH')) exit;
-
-class Analytics extends \Twig_Extension {
+class Analytics extends AbstractExtension {
   public function getFunctions() {
-    $analytics = new AnalyticsGenerator(new Reporter());
-    return array(
-      new \Twig_SimpleFunction(
+    $analytics = ContainerWrapper::getInstance()->get(AnalyticsGenerator::class);
+    if (!$analytics instanceof AnalyticsGenerator) {
+      throw new InvalidStateException('AnalyticsGenerator service was not registered!');
+    }
+    return [
+      new TwigFunction(
         'get_analytics_data',
-        array($analytics, 'generateAnalytics'),
-        array('is_safe' => array('all'))
+        [$analytics, 'generateAnalytics'],
+        ['is_safe' => ['all']]
       ),
-      new \Twig_SimpleFunction(
+      new TwigFunction(
         'is_analytics_enabled',
-        array($analytics, 'isEnabled'),
-        array('is_safe' => array('all'))
+        [$analytics, 'isEnabled'],
+        ['is_safe' => ['all']]
       ),
-      new \Twig_SimpleFunction(
+      new TwigFunction(
         'get_analytics_public_id',
-        array($analytics, 'getPublicId'),
-        array('is_safe' => array('all'))
+        [$analytics, 'getPublicId'],
+        ['is_safe' => ['all']]
       ),
-      new \Twig_SimpleFunction(
+      new TwigFunction(
         'is_analytics_public_id_new',
-        array($analytics, 'isPublicIdNew'),
-        array('is_safe' => array('all'))
-      )
-    );
+        [$analytics, 'isPublicIdNew'],
+        ['is_safe' => ['all']]
+      ),
+    ];
   }
 }

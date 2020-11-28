@@ -2,125 +2,141 @@
 
 namespace MailPoet\Subscribers\ImportExport\Export;
 
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Config\Env;
 use MailPoet\Models\CustomField;
 use MailPoet\Subscribers\ImportExport\ImportExportFactory;
-use function MailPoet\Util\array_column;
 use MailPoet\Util\Security;
-use MailPoet\Util\XLSXWriter;
+use MailPoet\WP\Functions as WPFunctions;
+use MailPoetVendor\XLSXWriter;
 
 class Export {
   const SUBSCRIBER_BATCH_SIZE = 15000;
 
-  public $export_format_option;
-  public $subscriber_fields;
-  public $subscriber_custom_fields;
-  public $formatted_subscriber_fields;
-  public $export_path;
-  public $export_file;
-  public $export_file_URL;
-  public $default_subscribers_getter;
-  public $dynamic_subscribers_getter;
+  public $exportFormatOption;
+  public $subscriberFields;
+  public $subscriberCustomFields;
+  public $formattedSubscriberFields;
+  public $exportPath;
+  public $exportFile;
+  public $exportFileURL;
+  public $defaultSubscribersGetter;
+  public $dynamicSubscribersGetter;
 
   public function __construct($data) {
-    if(strpos(@ini_get('disable_functions'), 'set_time_limit') === false) {
+    if (strpos((string)@ini_get('disable_functions'), 'set_time_limit') === false) {
       set_time_limit(0);
     }
 
-    $this->default_subscribers_getter = new DefaultSubscribersGetter(
+    $this->defaultSubscribersGetter = new DefaultSubscribersGetter(
       $data['segments'],
       self::SUBSCRIBER_BATCH_SIZE
     );
 
-    $this->dynamic_subscribers_getter = new DynamicSubscribersGetter(
+    $this->dynamicSubscribersGetter = new DynamicSubscribersGetter(
       $data['segments'],
       self::SUBSCRIBER_BATCH_SIZE
     );
 
-    $this->export_format_option = $data['export_format_option'];
-    $this->subscriber_fields = $data['subscriber_fields'];
-    $this->subscriber_custom_fields = $this->getSubscriberCustomFields();
-    $this->formatted_subscriber_fields = $this->formatSubscriberFields(
-      $this->subscriber_fields,
-      $this->subscriber_custom_fields
+    $this->exportFormatOption = $data['export_format_option'];
+    $this->subscriberFields = $data['subscriber_fields'];
+    $this->subscriberCustomFields = $this->getSubscriberCustomFields();
+    $this->formattedSubscriberFields = $this->formatSubscriberFields(
+      $this->subscriberFields,
+      $this->subscriberCustomFields
     );
-    $this->export_path = Env::$temp_path;
-    $this->export_file = $this->getExportFile($this->export_format_option);
-    $this->export_file_URL = $this->getExportFileURL($this->export_file);
+    $this->exportPath = self::getExportPath();
+    $this->exportFile = $this->getExportFile($this->exportFormatOption);
+    $this->exportFileURL = $this->getExportFileURL($this->exportFile);
   }
 
-  function process() {
-    $this->default_subscribers_getter->reset();
+  public static function getFilePrefix() {
+    return 'MailPoet_export_';
+  }
+
+  public static function getExportPath() {
+    return Env::$tempPath;
+  }
+
+  public function process() {
+    $processedSubscribers = 0;
+    $this->defaultSubscribersGetter->reset();
     try {
-      if(is_writable($this->export_path) === false) {
+      if (is_writable($this->exportPath) === false) {
         throw new \Exception(__('The export file could not be saved on the server.', 'mailpoet'));
       }
-      if(!extension_loaded('zip')) {
+      if (!extension_loaded('zip') && ($this->exportFormatOption === 'xlsx')) {
         throw new \Exception(__('Export requires a ZIP extension to be installed on the host.', 'mailpoet'));
       }
-      $processed_subscribers = call_user_func(
-        array(
-          $this,
-          'generate' . strtoupper($this->export_format_option)
-        )
-      );
-    } catch(\Exception $e) {
+      $callback = [
+        $this,
+        'generate' . strtoupper($this->exportFormatOption),
+      ];
+      if (is_callable($callback)) {
+        $processedSubscribers = call_user_func($callback);
+      }
+    } catch (\Exception $e) {
       throw new \Exception($e->getMessage());
     }
-    return array(
-      'totalExported' => $processed_subscribers,
-      'exportFileURL' => $this->export_file_URL
-    );
+    return [
+      'totalExported' => $processedSubscribers,
+      'exportFileURL' => $this->exportFileURL,
+    ];
   }
 
-  function generateCSV() {
-    $processed_subscribers = 0;
-    $formatted_subscriber_fields = $this->formatted_subscriber_fields;
-    $CSV_file = fopen($this->export_file, 'w');
-    $format_CSV = function($row) {
+  public function generateCSV() {
+    $processedSubscribers = 0;
+    $formattedSubscriberFields = $this->formattedSubscriberFields;
+    $cSVFile = fopen($this->exportFile, 'w');
+    if ($cSVFile === false) {
+      throw new \Exception(__('Failed opening file for export.', 'mailpoet'));
+    }
+    $formatCSV = function($row) {
       return '"' . str_replace('"', '\"', $row) . '"';
     };
-    $formatted_subscriber_fields[] = __('List', 'mailpoet');
+    $formattedSubscriberFields[] = WPFunctions::get()->__('List', 'mailpoet');
     // add UTF-8 BOM (3 bytes, hex EF BB BF) at the start of the file for
     // Excel to automatically recognize the encoding
-    fwrite($CSV_file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+    fwrite($cSVFile, chr(0xEF) . chr(0xBB) . chr(0xBF));
     fwrite(
-      $CSV_file,
+      $cSVFile,
       implode(
         ',',
         array_map(
-          $format_CSV,
-          $formatted_subscriber_fields
+          $formatCSV,
+          $formattedSubscriberFields
         )
       ) . PHP_EOL
     );
 
     $subscribers = $this->getSubscribers();
-    while($subscribers !== false) {
-      $processed_subscribers += count($subscribers);
-      foreach($subscribers as $subscriber) {
+    while ($subscribers !== false) {
+      $processedSubscribers += count($subscribers);
+      foreach ($subscribers as $subscriber) {
         $row = $this->formatSubscriberData($subscriber);
         $row[] = ucwords($subscriber['segment_name']);
-        fwrite($CSV_file, implode(',', array_map($format_CSV, $row)) . "\n");
+        fwrite($cSVFile, implode(',', array_map($formatCSV, $row)) . "\n");
       }
       $subscribers = $this->getSubscribers();
     }
-    fclose($CSV_file);
-    return $processed_subscribers;
+    fclose($cSVFile);
+    return $processedSubscribers;
   }
 
-  function generateXLSX() {
-    $processed_subscribers = 0;
-    $XLSX_writer = new XLSXWriter();
-    $XLSX_writer->setAuthor('MailPoet (www.mailpoet.com)');
-    $last_segment = false;
-    $processed_segments = array();
+  public function generateXLSX() {
+    $processedSubscribers = 0;
+    $xLSXWriter = new XLSXWriter();
+    $xLSXWriter->setAuthor('MailPoet (www.mailpoet.com)');
+    $lastSegment = false;
+    $processedSegments = [];
 
     $subscribers = $this->getSubscribers();
-    while($subscribers !== false) {
-      $processed_subscribers += count($subscribers);
-      foreach($subscribers as $i => $subscriber) {
-        $current_segment = ucwords($subscriber['segment_name']);
+    while ($subscribers !== false) {
+      $processedSubscribers += count($subscribers);
+      foreach ($subscribers as $i => $subscriber) {
+        $currentSegment = ucwords($subscriber['segment_name']);
         // Sheet header (1st row) will be written only if:
         // * This is the first time we're processing a segment
         // * The previous subscriber's segment is different from the current subscriber's segment
@@ -129,66 +145,66 @@ class Export {
         // sorted by segment name (due to slow queries when using ORDER BY and LIMIT),
         // we need to keep track of processed segments so that we do not create header
         // multiple times when switching from one segment to another and back.
-        if((!count($processed_segments) || $last_segment !== $current_segment) &&
-          (!in_array($last_segment, $processed_segments) || !in_array($current_segment, $processed_segments))
+        if ((!count($processedSegments) || $lastSegment !== $currentSegment) &&
+          (!in_array($lastSegment, $processedSegments) || !in_array($currentSegment, $processedSegments))
         ) {
           $this->writeXLSX(
-            $XLSX_writer,
+            $xLSXWriter,
             $subscriber['segment_name'],
-            $this->formatted_subscriber_fields
+            $this->formattedSubscriberFields
           );
-          $processed_segments[] = $current_segment;
+          $processedSegments[] = $currentSegment;
         }
-        $last_segment = ucwords($subscriber['segment_name']);
+        $lastSegment = ucwords($subscriber['segment_name']);
         // detect RTL language and set Excel to properly display the sheet
-        $RTL_regex = '/\p{Arabic}|\p{Hebrew}/u';
-        if(!$XLSX_writer->rtl && (
-            preg_grep($RTL_regex, $subscriber) ||
-            preg_grep($RTL_regex, $this->formatted_subscriber_fields))
+        $rTLRegex = '/\p{Arabic}|\p{Hebrew}/u';
+        if (!$xLSXWriter->rtl && (
+            preg_grep($rTLRegex, $subscriber) ||
+            preg_grep($rTLRegex, $this->formattedSubscriberFields))
         ) {
-          $XLSX_writer->rtl = true;
+          $xLSXWriter->rtl = true;
         }
         $this->writeXLSX(
-          $XLSX_writer,
-          $last_segment,
+          $xLSXWriter,
+          $lastSegment,
           $this->formatSubscriberData($subscriber)
         );
       }
       $subscribers = $this->getSubscribers();
     }
-    $XLSX_writer->writeToFile($this->export_file);
-    return $processed_subscribers;
+    $xLSXWriter->writeToFile($this->exportFile);
+    return $processedSubscribers;
   }
 
-  function writeXLSX($XLSX_writer, $segment, $data) {
-    return $XLSX_writer->writeSheetRow(ucwords($segment), $data);
+  public function writeXLSX($xLSXWriter, $segment, $data) {
+    return $xLSXWriter->writeSheetRow(ucwords($segment), $data);
   }
 
-  function getSubscribers() {
-    $subscribers = $this->default_subscribers_getter->get();
-    if($subscribers === false) {
-      $subscribers = $this->dynamic_subscribers_getter->get();
+  public function getSubscribers() {
+    $subscribers = $this->defaultSubscribersGetter->get();
+    if ($subscribers === false) {
+      $subscribers = $this->dynamicSubscribersGetter->get();
     }
     return $subscribers;
   }
 
-  function getExportFileURL($file) {
+  public function getExportFileURL($file) {
     return sprintf(
       '%s/%s',
-      Env::$temp_url,
+      Env::$tempUrl,
       basename($file)
     );
   }
 
-  function getExportFile($format) {
+  public function getExportFile($format) {
     return sprintf(
-      $this->export_path . '/MailPoet_export_%s.%s',
+      $this->exportPath . '/' . self::getFilePrefix() . '%s.%s',
       Security::generateRandomString(15),
       $format
     );
   }
 
-  function getSubscriberCustomFields() {
+  public function getSubscriberCustomFields() {
     return array_column(
       CustomField::findArray(),
       'name',
@@ -196,23 +212,23 @@ class Export {
     );
   }
 
-  function formatSubscriberFields($subscriber_fields, $subscriber_custom_fields) {
-    $export_factory = new ImportExportFactory('export');
-    $translated_fields = $export_factory->getSubscriberFields();
+  public function formatSubscriberFields($subscriberFields, $subscriberCustomFields) {
+    $exportFactory = new ImportExportFactory('export');
+    $translatedFields = $exportFactory->getSubscriberFields();
     return array_map(function($field) use (
-      $translated_fields, $subscriber_custom_fields
+      $translatedFields, $subscriberCustomFields
     ) {
-      $field = (isset($translated_fields[$field])) ?
-        ucfirst($translated_fields[$field]) :
+      $field = (isset($translatedFields[$field])) ?
+        ucfirst($translatedFields[$field]) :
         ucfirst($field);
-      return (isset($subscriber_custom_fields[$field])) ?
-        ucfirst($subscriber_custom_fields[$field]) : $field;
-    }, $subscriber_fields);
+      return (isset($subscriberCustomFields[$field])) ?
+        ucfirst($subscriberCustomFields[$field]) : $field;
+    }, $subscriberFields);
   }
 
-  function formatSubscriberData($subscriber) {
+  public function formatSubscriberData($subscriber) {
     return array_map(function($field) use ($subscriber) {
       return $subscriber[$field];
-    }, $this->subscriber_fields);
+    }, $this->subscriberFields);
   }
 }

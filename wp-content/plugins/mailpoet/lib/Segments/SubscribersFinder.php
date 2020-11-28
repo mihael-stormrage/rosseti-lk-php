@@ -2,66 +2,75 @@
 
 namespace MailPoet\Segments;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Entities\SegmentEntity;
+use MailPoet\InvalidStateException;
 use MailPoet\Models\ScheduledTask;
 use MailPoet\Models\ScheduledTaskSubscriber;
 use MailPoet\Models\Segment;
 use MailPoet\Models\Subscriber;
-use MailPoet\WP\Hooks;
-use function MailPoet\Util\array_column;
+use MailPoetVendor\Idiorm\ORM;
 
 class SubscribersFinder {
 
-  function findSubscribersInSegments($subscribers_to_process_ids, $newsletter_segments_ids) {
-    $result = array();
-    foreach($newsletter_segments_ids as $segment_id) {
-      $segment = Segment::find_one($segment_id);
-      $result = array_merge($result, $this->findSubscribersInSegment($segment, $subscribers_to_process_ids));
+  /** @var SegmentSubscribersRepository  */
+  private $segmentSubscriberRepository;
+
+  public function __construct(
+    SegmentSubscribersRepository $segmentSubscriberRepository
+  ) {
+    $this->segmentSubscriberRepository = $segmentSubscriberRepository;
+  }
+
+  public function findSubscribersInSegments($subscribersToProcessIds, $newsletterSegmentsIds) {
+    $result = [];
+    foreach ($newsletterSegmentsIds as $segmentId) {
+      $segment = Segment::findOne($segmentId);
+      if (!$segment instanceof Segment) {
+        continue; // skip deleted segments
+      }
+      $result = array_merge($result, $this->findSubscribersInSegment($segment, $subscribersToProcessIds));
     }
     return $this->unique($result);
   }
 
-  private function findSubscribersInSegment(Segment $segment, $subscribers_to_process_ids) {
-    if($this->isStaticSegment($segment)) {
-      $subscribers = Subscriber::findSubscribersInSegments($subscribers_to_process_ids, array($segment->id))->findMany();
-      return Subscriber::extractSubscribersIds($subscribers);
+  private function findSubscribersInSegment(Segment $segment, $subscribersToProcessIds): array {
+    try {
+      return $this->segmentSubscriberRepository->findSubscribersIdsInSegment((int)$segment->id, $subscribersToProcessIds);
+    } catch (InvalidStateException $e) {
+      return [];
     }
-    $finders = Hooks::applyFilters('mailpoet_get_subscribers_in_segment_finders', array());
-    foreach($finders as $finder) {
-      $subscribers = $finder->findSubscribersInSegment($segment, $subscribers_to_process_ids);
-      if($subscribers) {
-        return Subscriber::extractSubscribersIds($subscribers);
-      }
-    }
-    return array();
   }
 
   private function isStaticSegment(Segment $segment) {
-    return $segment->type === Segment::TYPE_DEFAULT || $segment->type === Segment::TYPE_WP_USERS;
+    return in_array($segment->type, [Segment::TYPE_DEFAULT, Segment::TYPE_WP_USERS, Segment::TYPE_WC_USERS], true);
   }
 
-  function addSubscribersToTaskFromSegments(ScheduledTask $task, array $segments) {
+  public function addSubscribersToTaskFromSegments(ScheduledTask $task, array $segments) {
     // Prepare subscribers on the DB side for performance reasons
-    $staticSegments = array();
-    $dynamicSegments = array();
-    foreach($segments as $segment) {
-      if($this->isStaticSegment($segment)) {
+    $staticSegments = [];
+    $dynamicSegments = [];
+    foreach ($segments as $segment) {
+      if ($this->isStaticSegment($segment)) {
         $staticSegments[] = $segment;
-      } else {
+      } elseif ($segment->type === SegmentEntity::TYPE_DYNAMIC) {
         $dynamicSegments[] = $segment;
       }
     }
     $count = 0;
-    if(!empty($staticSegments)) {
+    if (!empty($staticSegments)) {
       $count += $this->addSubscribersToTaskFromStaticSegments($task, $staticSegments);
     }
-    if(!empty($dynamicSegments)) {
+    if (!empty($dynamicSegments)) {
       $count += $this->addSubscribersToTaskFromDynamicSegments($task, $dynamicSegments);
     }
     return $count;
   }
 
   private function addSubscribersToTaskFromStaticSegments(ScheduledTask $task, array $segments) {
-    $segment_ids = array_map(function($segment) {
+    $segmentIds = array_map(function($segment) {
       return $segment->id;
     }, $segments);
     Subscriber::rawExecute(
@@ -73,39 +82,35 @@ class SubscribersFinder {
        WHERE subscribers.`deleted_at` IS NULL
        AND subscribers.`status` = ?
        AND relation.`status` = ?
-       AND relation.`segment_id` IN (' . join(',', array_map('intval', $segment_ids)) . ')',
-      array(
+       AND relation.`segment_id` IN (' . join(',', array_map('intval', $segmentIds)) . ')',
+      [
         $task->id,
         ScheduledTaskSubscriber::STATUS_UNPROCESSED,
         Subscriber::STATUS_SUBSCRIBED,
-        Subscriber::STATUS_SUBSCRIBED
-      )
+        Subscriber::STATUS_SUBSCRIBED,
+      ]
     );
-    return \ORM::getLastStatement()->rowCount();
+    return ORM::getLastStatement()->rowCount();
   }
 
   private function addSubscribersToTaskFromDynamicSegments(ScheduledTask $task, array $segments) {
     $count = 0;
-    foreach($segments as $segment) {
+    foreach ($segments as $segment) {
       $count += $this->addSubscribersToTaskFromDynamicSegment($task, $segment);
     }
     return $count;
   }
 
   private function addSubscribersToTaskFromDynamicSegment(ScheduledTask $task, Segment $segment) {
-    $finders = Hooks::applyFilters('mailpoet_get_subscribers_in_segment_finders', array());
     $count = 0;
-    foreach($finders as $finder) {
-      $subscribers = $finder->getSubscriberIdsInSegment($segment);
-      if($subscribers) {
-        $count += $this->addSubscribersToTaskByIds($task, $subscribers);
-      }
+    $subscribers = $this->segmentSubscriberRepository->getSubscriberIdsInSegment((int)$segment->id);
+    if ($subscribers) {
+      $count += $this->addSubscribersToTaskByIds($task, $subscribers);
     }
     return $count;
   }
 
-  private function addSubscribersToTaskByIds(ScheduledTask $task, array $subscribers) {
-    $subscribers = array_column($subscribers, 'id');
+  private function addSubscribersToTaskByIds(ScheduledTask $task, array $subscriberIds) {
     Subscriber::rawExecute(
       'INSERT IGNORE INTO ' . MP_SCHEDULED_TASK_SUBSCRIBERS_TABLE . '
        (task_id, subscriber_id, processed)
@@ -113,28 +118,21 @@ class SubscribersFinder {
        FROM ' . MP_SUBSCRIBERS_TABLE . ' subscribers
        WHERE subscribers.`deleted_at` IS NULL
        AND subscribers.`status` = ?
-       AND subscribers.`id` IN (' . join(',', array_map('intval', $subscribers)) . ')',
-      array(
+       AND subscribers.`id` IN (' . join(',', array_map('intval', $subscriberIds)) . ')',
+      [
         $task->id,
         ScheduledTaskSubscriber::STATUS_UNPROCESSED,
-        Subscriber::STATUS_SUBSCRIBED
-      )
+        Subscriber::STATUS_SUBSCRIBED,
+      ]
     );
-    return \ORM::getLastStatement()->rowCount();
+    return ORM::getLastStatement()->rowCount();
   }
 
-  private function unique($subscribers) {
-    $result = array();
-    foreach($subscribers as $subscriber) {
-      if(is_a($subscriber, 'MailPoet\Models\Model')) {
-        $result[$subscriber->id] = $subscriber;
-      } elseif(is_scalar($subscriber)) {
-        $result[$subscriber] = $subscriber;
-      } else {
-        $result[$subscriber['id']] = $subscriber;
-      }
+  private function unique(array $subscriberIds) {
+    $result = [];
+    foreach ($subscriberIds as $id) {
+      $result[$id] = $id;
     }
     return $result;
   }
-
 }

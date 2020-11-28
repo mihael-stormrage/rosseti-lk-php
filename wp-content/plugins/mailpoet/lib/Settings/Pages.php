@@ -1,17 +1,23 @@
 <?php
+
 namespace MailPoet\Settings;
+
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Subscription;
+use MailPoet\WP\Functions as WPFunctions;
 
 class Pages {
-  function __construct() {
+  public function __construct() {
   }
 
-  function init() {
-    register_post_type('mailpoet_page', array(
-      'labels' => array(
-        'name' => __('MailPoet Page', 'mailpoet'),
-        'singular_name' => __('MailPoet Page', 'mailpoet')
-      ),
+  public function init() {
+    WPFunctions::get()->registerPostType('mailpoet_page', [
+      'labels' => [
+        'name' => WPFunctions::get()->__('MailPoet Page', 'mailpoet'),
+        'singular_name' => WPFunctions::get()->__('MailPoet Page', 'mailpoet'),
+      ],
       'public' => true,
       'has_archive' => false,
       'show_ui' => false,
@@ -20,31 +26,50 @@ class Pages {
       'show_in_nav_menus' => false,
       'can_export' => false,
       'publicly_queryable' => true,
-      'exclude_from_search' => true
-    ));
+      'exclude_from_search' => true,
+    ]);
   }
 
-  static function createMailPoetPage() {
-    remove_all_actions('pre_post_update');
-    remove_all_actions('save_post');
-    remove_all_actions('wp_insert_post');
+  public static function createMailPoetPage() {
+    WPFunctions::get()->removeAllActions('pre_post_update');
+    WPFunctions::get()->removeAllActions('save_post');
+    WPFunctions::get()->removeAllActions('wp_insert_post');
 
-    $id = wp_insert_post(array(
+    $id = WPFunctions::get()->wpInsertPost([
       'post_status' => 'publish',
       'post_type' => 'mailpoet_page',
       'post_author' => 1,
       'post_content' => '[mailpoet_page]',
-      'post_title' => __('MailPoet Page', 'mailpoet'),
-      'post_name' => 'subscriptions'
-    ));
+      'post_title' => WPFunctions::get()->__('MailPoet Page', 'mailpoet'),
+      'post_name' => 'subscriptions',
+    ]);
 
     return ((int)$id > 0) ? (int)$id : false;
   }
 
-  static function getMailPoetPages() {
-    return get_posts(array(
-      'post_type' => 'mailpoet_page'
-    ));
+  public static function getDefaultMailPoetPage() {
+    $wp = WPFunctions::get();
+    $pages = $wp->getPosts([
+      'posts_per_page' => 1,
+      'orderby' => 'date',
+      'order' => 'DESC',
+      'post_type' => 'mailpoet_page',
+    ]);
+
+    $page = null;
+    if (!empty($pages)) {
+      $page = array_shift($pages);
+      if (strpos($page->post_content, '[mailpoet_page]') === false) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        $page = null;
+      }
+    }
+    return $page;
+  }
+
+  public static function getMailPoetPages() {
+    return WPFunctions::get()->getPosts([
+      'post_type' => 'mailpoet_page',
+    ]);
   }
 
   /**
@@ -52,39 +77,41 @@ class Pages {
    *
    * @return bool
    */
-  static function isMailpoetPage($id) {
+  public static function isMailpoetPage($id) {
     $mailpoetPages = static::getMailPoetPages();
-    foreach($mailpoetPages as $mailpoetPage) {
-      if($mailpoetPage->ID === $id) {
+    foreach ($mailpoetPages as $mailpoetPage) {
+      if ($mailpoetPage->ID === $id) {
         return true;
       }
     }
     return false;
   }
 
-  static function getAll() {
-    $all_pages = array_merge(
+  public static function getAll() {
+    $allPages = array_merge(
       static::getMailPoetPages(),
-      get_pages()
+      WPFunctions::get()->getPages()
     );
 
-    $pages = array();
-    foreach($all_pages as $page) {
+    $pages = [];
+    foreach ($allPages as $page) {
       $pages[] = static::getPageData($page);
     }
 
     return $pages;
   }
 
-  static function getPageData($page) {
-    return array(
+  public static function getPageData($page) {
+    $subscriptionUrlFactory = Subscription\SubscriptionUrlFactory::getInstance();
+    return [
       'id' => $page->ID,
-      'title' => $page->post_title,
-      'url' => array(
-        'unsubscribe' => Subscription\Url::getSubscriptionUrl($page, 'unsubscribe'),
-        'manage' => Subscription\Url::getSubscriptionUrl($page, 'manage'),
-        'confirm' => Subscription\Url::getSubscriptionUrl($page, 'confirm')
-      )
-    );
+      'title' => $page->post_title, // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+      'url' => [
+        'unsubscribe' => $subscriptionUrlFactory->getSubscriptionUrl($page, 'unsubscribe'),
+        'manage' => $subscriptionUrlFactory->getSubscriptionUrl($page, 'manage'),
+        'confirm' => $subscriptionUrlFactory->getSubscriptionUrl($page, 'confirm'),
+        'confirm_unsubscribe' => $subscriptionUrlFactory->getSubscriptionUrl($page, 'confirm_unsubscribe'),
+      ],
+    ];
   }
 }

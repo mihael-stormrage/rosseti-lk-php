@@ -1,97 +1,102 @@
 <?php
-
 namespace MailPoet\Config\PopulatorData\Templates;
+
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
+
 
 class AppWelcome {
 
   private $template_image_url;
   private $social_icon_url;
 
-  function __construct($assets_url) {
+  public function __construct($assets_url) {
     $this->template_image_url = 'https://ps.w.org/mailpoet/assets/newsletter-templates/app_welcome';
     $this->social_icon_url = $assets_url . '/img/newsletter_editor/social-icons';
   }
 
-  function get() {
-    return array(
-      'name' => __("App Welcome", 'mailpoet'),
-      'categories' => json_encode(array('welcome', 'all')),
+  public function get() {
+    return [
+      'name' => WPFunctions::get()->__("App Welcome", 'mailpoet'),
+      'categories' => json_encode(['welcome', 'all']),
       'readonly' => 1,
       'thumbnail' => $this->getThumbnail(),
       'body' => json_encode($this->getBody()),
-    );
+    ];
   }
 
   private function getBody() {
-    return array(
-      'content' => array(
+    return [
+      'content' => [
         'type' => 'container',
         'orientation' => 'vertical',
-        'styles' => array(
-          'block' => array(
+        'styles' => [
+          'block' => [
             'backgroundColor' => 'transparent',
-          ),
-        ),
-        'blocks' => array(
-          array(
+          ],
+        ],
+        'blocks' => [
+          [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#eeeeee',
-              ),
-            ),
-            'blocks' => array(
-              array(
+              ],
+            ],
+            'blocks' => [
+              [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  array(
+                  ],
+                ],
+                'blocks' => [
+                  [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#eeeeee',
                         'height' => '30px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#32b6c6',
-              ),
-            ),
-            'blocks' => array(
-              array(
+              ],
+            ],
+            'blocks' => [
+              [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  array(
+                  ],
+                ],
+                'blocks' => [
+                  [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/App-Signup-Logo-1.png',
@@ -99,18 +104,18 @@ class AppWelcome {
                     'fullWidth' => false,
                     'width' => '80px',
                     'height' => '80px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'text',
                     'text' => '<h1 style="text-align: center; margin: 0;"><strong>Welcome to Appy</strong></h1><p style="text-align: center; margin: 0;"><span style="color: #ffffff;">Let\'s get started!</span></p>',
-                  ),
+                  ],
 
-                  array(
+                  [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/App-Signup-Header.png',
@@ -118,45 +123,45 @@ class AppWelcome {
                     'fullWidth' => false,
                     'width' => '1280px',
                     'height' => '500px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
 
-          array(
+          [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#ffffff',
-              ),
-            ),
-            'blocks' => array(
-              array(
+              ],
+            ],
+            'blocks' => [
+              [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  array(
+                  ],
+                ],
+                'blocks' => [
+                  [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'text',
                     'text' => '<p style="text-align: center;">Hi [subscriber:firstname | default:subscriber],</p>
                                   <p style="text-align: center;"></p>
@@ -165,44 +170,44 @@ class AppWelcome {
                                   <p style="text-align: center;">Is this too simple? You can still style your text with basic formatting, like <strong>bold</strong> or <em>italics.</em></p>
                                   <p style="text-align: center;"></p>
                                   <p style="text-align: center;">Finally, you can also add a call-to-action button between 2 blocks of text, like this:</p>',
-                  ),
-                ),
-              ),
-            ),
-          ),
-          array(
+                  ],
+                ],
+              ],
+            ],
+          ],
+          [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#ffffff',
-              ),
-            ),
-            'blocks' => array(
-              array(
+              ],
+            ],
+            'blocks' => [
+              [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  array(
+                  ],
+                ],
+                'blocks' => [
+                  [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '23px',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'button',
                     'text' => 'Get Started Here',
                     'url' => '',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#32b6c6',
                         'borderColor' => '#32b6c6',
                         'borderWidth' => '0px',
@@ -215,41 +220,41 @@ class AppWelcome {
                         'fontSize' => '18px',
                         'fontWeight' => 'normal',
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '35px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              array(
+              ],
+            ],
+            'blocks' => [
+              [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  array(
+                  ],
+                ],
+                'blocks' => [
+                  [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/App-Signup-Team.jpg',
@@ -257,44 +262,44 @@ class AppWelcome {
                     'fullWidth' => true,
                     'width' => '1280px',
                     'height' => '700px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#eeeeee',
-              ),
-            ),
-            'blocks' => array(
-              array(
+              ],
+            ],
+            'blocks' => [
+              [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  array(
+                  ],
+                ],
+                'blocks' => [
+                  [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '30px',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/App-Signup-Logo-Footer.png',
@@ -302,25 +307,25 @@ class AppWelcome {
                     'fullWidth' => false,
                     'width' => '50px',
                     'height' => '50px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'text',
                     'text' => '<p style="text-align: center; font-size: 12px;"><strong>Appy</strong></p>
                                 <p style="text-align: center; font-size: 12px;"><span>Address Line 1</span></p>
                                 <p style="text-align: center; font-size: 12px;"><span>Address Line 2</span></p>
                                 <p style="text-align: center; font-size: 12px;"><span>City</span></p>
-                                <p style="text-align: center; font-size: 12px;"><a href="[link:subscription_unsubscribe_url]">Unsubscribe</a><span> | </span><a href="[link:subscription_manage_url]">Manage subscription</a></p>',
-                  ),
-                  array(
+                                <p style="text-align: center; font-size: 12px;"><a href="[link:subscription_unsubscribe_url]">'.WPFunctions::get()->__("Unsubscribe", 'mailpoet').'</a><span> | </span><a href="[link:subscription_manage_url]">'.WPFunctions::get()->__("Manage your subscription", 'mailpoet').'</a></p>',
+                  ],
+                  [
                     'type' => 'social',
                     'iconSet' => 'full-symbol-color',
-                    'icons' => array(
-                      array(
+                    'icons' => [
+                      [
                         'type' => 'socialIcon',
                         'iconType' => 'facebook',
                         'link' => 'http://www.facebook.com',
@@ -328,8 +333,8 @@ class AppWelcome {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Facebook',
-                      ),
-                      array(
+                      ],
+                      [
                         'type' => 'socialIcon',
                         'iconType' => 'twitter',
                         'link' => 'http://www.twitter.com',
@@ -337,8 +342,8 @@ class AppWelcome {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Twitter',
-                      ),
-                      array(
+                      ],
+                      [
                         'type' => 'socialIcon',
                         'iconType' => 'youtube',
                         'link' => 'http://www.youtube.com',
@@ -346,8 +351,8 @@ class AppWelcome {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Youtube',
-                      ),
-                      array(
+                      ],
+                      [
                         'type' => 'socialIcon',
                         'iconType' => 'instagram',
                         'link' => 'http://instagram.com',
@@ -355,61 +360,61 @@ class AppWelcome {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Instagram',
-                      ),
-                    ),
-                  ),
-                  array(
+                      ],
+                    ],
+                  ],
+                  [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      'globalStyles' => array(
-        'text' => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+        ],
+      ],
+      'globalStyles' => [
+        'text' => [
           'fontColor' => '#404040',
           'fontFamily' => 'Arial',
           'fontSize' => '15px',
-        ),
-        'h1' => array(
+        ],
+        'h1' => [
           'fontColor' => '#ffffff',
           'fontFamily' => 'Arial',
           'fontSize' => '26px',
-        ),
-        'h2' => array(
+        ],
+        'h2' => [
           'fontColor' => '#404040',
           'fontFamily' => 'Arial',
           'fontSize' => '22px',
-        ),
-        'h3' => array(
+        ],
+        'h3' => [
           'fontColor' => '#32b6c6',
           'fontFamily' => 'Arial',
           'fontSize' => '18px',
-        ),
-        'link' => array(
+        ],
+        'link' => [
           'fontColor' => '#32b6c6',
           'textDecoration' => 'underline',
-        ),
-        'wrapper' => array(
+        ],
+        'wrapper' => [
           'backgroundColor' => '#ffffff',
-        ),
-        'body' => array(
+        ],
+        'body' => [
           'backgroundColor' => '#eeeeee',
-        ),
-      ),
-    );
+        ],
+      ],
+    ];
   }
 
   private function getThumbnail() {
-    return $this->template_image_url . '/app-welcome-email.jpg';
+    return $this->template_image_url . '/thumbnail.20190411-1500.jpg';
   }
 
 }

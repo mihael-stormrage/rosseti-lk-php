@@ -1,155 +1,165 @@
 <?php
+
 namespace MailPoet\Subscribers\ImportExport;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\DynamicSegments\FreePluginConnectors\AddToNewslettersSegments;
 use MailPoet\Models\CustomField;
 use MailPoet\Models\Segment;
-use MailPoet\Premium\Models\DynamicSegment;
 use MailPoet\Util\Helpers;
-use MailPoet\WP\Hooks;
 
 class ImportExportFactory {
-  const IMPORT_ACTION = 'import'; 
+  const IMPORT_ACTION = 'import';
   const EXPORT_ACTION = 'export';
 
+  /** @var string|null  */
   public $action;
 
-  function __construct($action = null) {
+  /** @var AddToNewslettersSegments */
+  private $addToNewslettersSegments;
+
+  public function __construct($action = null) {
     $this->action = $action;
+    $this->addToNewslettersSegments = ContainerWrapper::getInstance()->get(AddToNewslettersSegments::class);
   }
 
-  function getSegments() {
-    if($this->action === self::IMPORT_ACTION) {
+  public function getSegments() {
+    if ($this->action === self::IMPORT_ACTION) {
       $segments = Segment::getSegmentsForImport();
     } else {
       $segments = Segment::getSegmentsForExport();
-      $segments = Hooks::applyFilters('mailpoet_segments_with_subscriber_count', $segments);
+      $segments = $this->addToNewslettersSegments->add($segments);
       $segments = array_values(array_filter($segments, function($segment) {
         return $segment['subscribers'] > 0;
       }));
     }
 
     return array_map(function($segment) {
-      if(!$segment['name']) $segment['name'] = __('Not In List', 'mailpoet');
-      if(!$segment['id']) $segment['id'] = 0;
-      return array(
+      if (!$segment['name']) $segment['name'] = __('Not In List', 'mailpoet');
+      if (!$segment['id']) $segment['id'] = 0;
+      return [
         'id' => $segment['id'],
         'name' => $segment['name'],
-        'subscriberCount' => $segment['subscribers']
-      );
+        'count' => $segment['subscribers'],
+      ];
     }, $segments);
   }
 
-  function getSubscriberFields() {
-    $fields = array(
+  public function getSubscriberFields() {
+    $fields = [
       'email' => __('Email', 'mailpoet'),
       'first_name' => __('First name', 'mailpoet'),
-      'last_name' => __('Last name', 'mailpoet')
-    );
-    if($this->action === 'export') {
+      'last_name' => __('Last name', 'mailpoet'),
+    ];
+    if ($this->action === 'export') {
       $fields = array_merge(
         $fields,
-        array(
+        [
           'list_status' => _x('List status', 'Subscription status', 'mailpoet'),
           'global_status' => _x('Global status', 'Subscription status', 'mailpoet'),
-          'subscribed_ip' => __('IP address', 'mailpoet')
-        )
+          'subscribed_ip' => __('IP address', 'mailpoet'),
+        ]
       );
     }
     return $fields;
   }
 
-  function formatSubscriberFields($subscriber_fields) {
-    return array_map(function($field_id, $field_name) {
-      return array(
-        'id' => $field_id,
-        'name' => $field_name,
-        'type' => ($field_id === 'confirmed_at') ? 'date' : null,
-        'custom' => false
-      );
-    }, array_keys($subscriber_fields), $subscriber_fields);
+  public function formatSubscriberFields($subscriberFields) {
+    return array_map(function($fieldId, $fieldName) {
+      return [
+        'id' => $fieldId,
+        'name' => $fieldName,
+        'type' => ($fieldId === 'confirmed_at') ? 'date' : null,
+        'custom' => false,
+      ];
+    }, array_keys($subscriberFields), $subscriberFields);
   }
 
-  function getSubscriberCustomFields() {
+  public function getSubscriberCustomFields() {
     return CustomField::findArray();
   }
 
-  function formatSubscriberCustomFields($subscriber_custom_fields) {
+  public function formatSubscriberCustomFields($subscriberCustomFields) {
     return array_map(function($field) {
-      return array(
+      return [
         'id' => $field['id'],
         'name' => $field['name'],
         'type' => $field['type'],
         'params' => unserialize($field['params']),
-        'custom' => true
-      );
-    }, $subscriber_custom_fields);
+        'custom' => true,
+      ];
+    }, $subscriberCustomFields);
   }
 
-  function formatFieldsForSelect2(
-    $subscriber_fields,
-    $subscriber_custom_fields) {
+  public function formatFieldsForSelect2(
+    $subscriberFields,
+    $subscriberCustomFields) {
     $actions = ($this->action === 'import') ?
-      array(
-        array(
+      [
+        [
           'id' => 'ignore',
           'name' => __('Ignore field...', 'mailpoet'),
-        ),
-        array(
+        ],
+        [
           'id' => 'create',
-          'name' => __('Create new field...', 'mailpoet')
-        ),
-      ) :
-      array(
-        array(
+          'name' => __('Create new field...', 'mailpoet'),
+        ],
+      ] :
+      [
+        [
           'id' => 'select',
           'name' => __('Select all...', 'mailpoet'),
-        ),
-        array(
+        ],
+        [
           'id' => 'deselect',
-          'name' => __('Deselect all...', 'mailpoet')
-        ),
-      );
-    $select2Fields = array(
-      array(
+          'name' => __('Deselect all...', 'mailpoet'),
+        ],
+      ];
+    $select2Fields = [
+      [
         'name' => __('Actions', 'mailpoet'),
-        'children' => $actions
-      ),
-      array(
+        'children' => $actions,
+      ],
+      [
         'name' => __('System fields', 'mailpoet'),
-        'children' => $this->formatSubscriberFields($subscriber_fields)
-      )
-    );
-    if($subscriber_custom_fields) {
-      array_push($select2Fields, array(
+        'children' => $this->formatSubscriberFields($subscriberFields),
+      ],
+    ];
+    if ($subscriberCustomFields) {
+      array_push($select2Fields, [
         'name' => __('User fields', 'mailpoet'),
         'children' => $this->formatSubscriberCustomFields(
-          $subscriber_custom_fields
-        )
-      ));
+          $subscriberCustomFields
+        ),
+      ]);
     }
     return $select2Fields;
   }
 
-  function bootstrap() {
-    $subscriber_fields = $this->getSubscriberFields();
-    $subscriber_custom_fields = $this->getSubscriberCustomFields();
+  public function bootstrap() {
+    $subscriberFields = $this->getSubscriberFields();
+    $subscriberCustomFields = $this->getSubscriberCustomFields();
     $data['segments'] = json_encode($this->getSegments());
     $data['subscriberFieldsSelect2'] = json_encode(
       $this->formatFieldsForSelect2(
-        $subscriber_fields,
-        $subscriber_custom_fields
+        $subscriberFields,
+        $subscriberCustomFields
       )
     );
-    if($this->action === 'import') {
+    if ($this->action === 'import') {
       $data['subscriberFields'] = json_encode(
         array_merge(
-          $this->formatSubscriberFields($subscriber_fields),
-          $this->formatSubscriberCustomFields($subscriber_custom_fields)
+          $this->formatSubscriberFields($subscriberFields),
+          $this->formatSubscriberCustomFields($subscriberCustomFields)
         )
       );
       $data['maxPostSizeBytes'] = Helpers::getMaxPostSize('bytes');
       $data['maxPostSize'] = Helpers::getMaxPostSize();
     }
+    $data['zipExtensionLoaded'] = extension_loaded('zip');
     return $data;
   }
 }

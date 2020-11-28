@@ -1,73 +1,92 @@
 <?php
+
 namespace MailPoet\Models;
 
-use MailPoet\Util\Helpers;
-use MailPoet\WP\Emoji;
-use MailPoet\Tasks\Subscribers as TaskSubscribers;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\Entities\SendingQueueEntity;
+use MailPoet\Tasks\Subscribers as TaskSubscribers;
+use MailPoet\Util\Helpers;
+use MailPoet\WP\Functions as WPFunctions;
+
+/**
+ * @property int $countProcessed
+ * @property int $countToProcess
+ * @property int $countTotal
+ * @property string|array $newsletterRenderedBody
+ * @property string $newsletterRenderedSubject
+ * @property int $taskId
+ * @property int $newsletterId
+ * @property string|object|null $meta
+ * @property string|array $subscribers
+ * @property string|null $deletedAt
+ * @property string $scheduledAt
+ * @property string $status
+ */
 
 class SendingQueue extends Model {
-  public static $_table = MP_SENDING_QUEUES_TABLE;
-  const STATUS_COMPLETED = 'completed';
-  const STATUS_SCHEDULED = 'scheduled';
-  const STATUS_PAUSED = 'paused';
-  const PRIORITY_HIGH = 1;
-  const PRIORITY_MEDIUM = 5;
-  const PRIORITY_LOW = 10;
+  public static $_table = MP_SENDING_QUEUES_TABLE; // phpcs:ignore PSR2.Classes.PropertyDeclaration
+  const STATUS_COMPLETED = SendingQueueEntity::STATUS_COMPLETED;
+  const STATUS_SCHEDULED = SendingQueueEntity::STATUS_SCHEDULED;
+  const STATUS_PAUSED = SendingQueueEntity::STATUS_PAUSED;
+  const PRIORITY_HIGH = SendingQueueEntity::PRIORITY_HIGH;
+  const PRIORITY_MEDIUM = SendingQueueEntity::PRIORITY_MEDIUM;
+  const PRIORITY_LOW = SendingQueueEntity::PRIORITY_LOW;
 
-  function __construct() {
+  public function __construct() {
     parent::__construct();
 
-    $this->addValidations('newsletter_rendered_body', array(
-      'validRenderedNewsletterBody' => __('Rendered newsletter body is invalid!', 'mailpoet')
-    ));
+    $this->addValidations('newsletter_rendered_body', [
+      'validRenderedNewsletterBody' => WPFunctions::get()->__('Rendered newsletter body is invalid!', 'mailpoet'),
+    ]);
   }
 
-  function task() {
+  public function task() {
     return $this->hasOne(__NAMESPACE__ . '\ScheduledTask', 'id', 'task_id');
   }
 
-  function newsletter() {
+  public function newsletter() {
     return $this->has_one(__NAMESPACE__ . '\Newsletter', 'id', 'newsletter_id');
   }
 
-  function pause() {
-    if($this->count_processed === $this->count_total) {
+  public function pause() {
+    if ($this->countProcessed === $this->countTotal) {
       return false;
     } else {
       return $this->task()->findOne()->pause();
     }
   }
 
-  function resume() {
-    if($this->count_processed === $this->count_total) {
+  public function resume() {
+    if ($this->countProcessed === $this->countTotal) {
       return $this->complete();
     } else {
+      $this->newsletter()->findOne()->setStatus(Newsletter::STATUS_SENDING);
       return $this->task()->findOne()->resume();
     }
   }
 
-  function complete() {
+  public function complete() {
     return $this->task()->findOne()->complete();
   }
 
-  function save() {
-    $this->newsletter_rendered_body = $this->getNewsletterRenderedBody();
-    if(!Helpers::isJson($this->newsletter_rendered_body) && !is_null($this->newsletter_rendered_body)) {
+  public function save() {
+    $this->newsletterRenderedBody = $this->getNewsletterRenderedBody();
+    if (!Helpers::isJson($this->newsletterRenderedBody) && !is_null($this->newsletterRenderedBody)) {
       $this->set(
         'newsletter_rendered_body',
-        json_encode($this->encodeEmojisInBody($this->newsletter_rendered_body))
+        (string)json_encode($this->newsletterRenderedBody)
       );
     }
-    if(!Helpers::isJson($this->meta)) {
+    if (!is_null($this->meta) && !Helpers::isJson($this->meta)) {
       $this->set(
         'meta',
-        json_encode($this->meta)
+        (string)json_encode($this->meta)
       );
     }
     parent::save();
-    $this->newsletter_rendered_body = $this->getNewsletterRenderedBody();
+    $this->newsletterRenderedBody = $this->getNewsletterRenderedBody();
     return $this;
   }
 
@@ -75,83 +94,62 @@ class SendingQueue extends Model {
    * Used only for checking processed subscribers in old queues
    */
   private function getSubscribers() {
-    if(!is_serialized($this->subscribers)) {
+    if (!is_serialized($this->subscribers)) {
       return $this->subscribers;
     }
     $subscribers = unserialize($this->subscribers);
-    if(empty($subscribers['processed'])) {
-      $subscribers['processed'] = array();
+    if (empty($subscribers['processed'])) {
+      $subscribers['processed'] = [];
     }
     return $subscribers;
   }
 
-  function getNewsletterRenderedBody($type = false) {
-    $rendered_newsletter = $this->decodeRenderedNewsletterBodyObject($this->newsletter_rendered_body);
-    return ($type && !empty($rendered_newsletter[$type])) ?
-      $rendered_newsletter[$type] :
-      $rendered_newsletter;
+  public function getNewsletterRenderedBody($type = false) {
+    $renderedNewsletter = $this->decodeRenderedNewsletterBodyObject($this->newsletterRenderedBody);
+    return ($type && !empty($renderedNewsletter[$type])) ?
+      $renderedNewsletter[$type] :
+      $renderedNewsletter;
   }
 
-  function getMeta() {
+  public function getMeta() {
     return (Helpers::isJson($this->meta)) ? json_decode($this->meta, true) : $this->meta;
   }
 
-  function encodeEmojisInBody($newsletter_rendered_body) {
-    if(is_array($newsletter_rendered_body)) {
-      foreach($newsletter_rendered_body as $key => $value) {
-        $newsletter_rendered_body[$key] = Emoji::encodeForUTF8Column(
-          self::$_table,
-          'newsletter_rendered_body',
-          $value
-        );
-      }
-    }
-    return $newsletter_rendered_body;
-  }
-
-  function decodeEmojisInBody($newsletter_rendered_body) {
-    if(is_array($newsletter_rendered_body)) {
-      foreach($newsletter_rendered_body as $key => $value) {
-        $newsletter_rendered_body[$key] = Emoji::decodeEntities($value);
-      }
-    }
-    return $newsletter_rendered_body;
-  }
-
-  function isSubscriberProcessed($subscriber_id) {
-    if(!empty($this->subscribers)
-      && ScheduledTaskSubscriber::getTotalCount($this->task_id) === 0
+  public function isSubscriberProcessed($subscriberId) {
+    if (!empty($this->subscribers)
+      && ScheduledTaskSubscriber::getTotalCount($this->taskId) === 0
     ) {
       $subscribers = $this->getSubscribers();
-      return in_array($subscriber_id, $subscribers['processed']);
+      return in_array($subscriberId, $subscribers['processed']);
     } else {
-      if($task = $this->task()->findOne()) {
-        $task_subscribers = new TaskSubscribers($task);
-        return $task_subscribers->isSubscriberProcessed($subscriber_id);
+      $task = $this->task()->findOne();
+      if ($task) {
+        $taskSubscribers = new TaskSubscribers($task);
+        return $taskSubscribers->isSubscriberProcessed($subscriberId);
       }
       return false;
     }
   }
 
-  function asArray() {
+  public function asArray() {
     $model = parent::asArray();
     $model['newsletter_rendered_body'] = $this->getNewsletterRenderedBody();
     $model['meta'] = $this->getMeta();
     return $model;
   }
 
-  private function decodeRenderedNewsletterBodyObject($rendered_body) {
-    if(is_serialized($rendered_body)) {
-      return $this->decodeEmojisInBody(unserialize($rendered_body));
+  private function decodeRenderedNewsletterBodyObject($renderedBody) {
+    if (is_serialized($renderedBody)) {
+      return unserialize($renderedBody);
     }
-    if(Helpers::isJson($rendered_body)) {
-      return $this->decodeEmojisInBody(json_decode($rendered_body, true));
+    if (Helpers::isJson($renderedBody)) {
+      return json_decode($renderedBody, true);
     }
-    return $rendered_body;
+    return $renderedBody;
   }
 
-  static function getTasks() {
-    return ScheduledTask::table_alias('tasks')
+  public static function getTasks() {
+    return ScheduledTask::tableAlias('tasks')
     ->selectExpr('tasks.*')
     ->join(
       MP_SENDING_QUEUES_TABLE,
@@ -160,8 +158,8 @@ class SendingQueue extends Model {
     );
   }
 
-  static function joinWithTasks() {
-    return static::table_alias('queues')
+  public static function joinWithTasks() {
+    return static::tableAlias('queues')
     ->join(
       MP_SCHEDULED_TASKS_TABLE,
       'tasks.id = queues.task_id',
@@ -169,7 +167,7 @@ class SendingQueue extends Model {
     );
   }
 
-  static function joinWithSubscribers() {
+  public static function joinWithSubscribers() {
     return static::joinWithTasks()
     ->join(
       MP_SCHEDULED_TASK_SUBSCRIBERS_TABLE,
@@ -178,8 +176,8 @@ class SendingQueue extends Model {
     );
   }
 
-  static function findTaskByNewsletterId($newsletter_id) {
+  public static function findTaskByNewsletterId($newsletterId) {
     return static::getTasks()
-    ->where('queues.newsletter_id', $newsletter_id);
+    ->where('queues.newsletter_id', $newsletterId);
   }
 }

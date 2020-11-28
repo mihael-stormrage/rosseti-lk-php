@@ -1,104 +1,127 @@
 <?php
+
 namespace MailPoet\Newsletter\Renderer\Blocks;
 
-use MailPoet\Models\Newsletter;
-use MailPoet\Models\NewsletterPost;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Entities\NewsletterEntity;
 use MailPoet\Newsletter\Renderer\Columns\ColumnsHelper;
 use MailPoet\Newsletter\Renderer\StylesHelper;
 
 class Renderer {
-  public $newsletter;
-  public $posts;
-  public $ALC;
+  /** @var AutomatedLatestContentBlock  */
+  private $ALC;
 
-  function __construct(array $newsletter) {
-    $this->newsletter = $newsletter;
-    $this->posts = array();
-    $newer_than_timestamp = false;
-    $newsletter_id = false;
-    if($newsletter['type'] === Newsletter::TYPE_NOTIFICATION_HISTORY) {
-      $newsletter_id = $newsletter['parent_id'];
+  /** @var Button */
+  private $button;
 
-      $last_post = NewsletterPost::getNewestNewsletterPost($newsletter_id);
-      if($last_post) {
-        $newer_than_timestamp = $last_post->created_at;
-      }
-    }
-    $this->ALC = new \MailPoet\Newsletter\AutomatedLatestContent(
-      $newsletter_id,
-      $newer_than_timestamp
-    );
+  /** @var Divider */
+  private $divider;
+
+  /** @var Footer */
+  private $footer;
+
+  /** @var Header */
+  private $header;
+
+  /** @var Image */
+  private $image;
+
+  /** @var Social */
+  private $social;
+
+  /** @var Spacer */
+  private $spacer;
+
+  /** @var Text */
+  private $text;
+
+  public function __construct(
+    AutomatedLatestContentBlock $ALC,
+    Button $button,
+    Divider $divider,
+    Footer $footer,
+    Header $header,
+    Image $image,
+    Social $social,
+    Spacer $spacer,
+    Text $text
+  ) {
+    $this->ALC = $ALC;
+    $this->button = $button;
+    $this->divider = $divider;
+    $this->footer = $footer;
+    $this->header = $header;
+    $this->image = $image;
+    $this->social = $social;
+    $this->spacer = $spacer;
+    $this->text = $text;
   }
 
-  function render($data) {
-    $column_count = count($data['blocks']);
-    $columns_layout = isset($data['columnLayout'])?$data['columnLayout']:null;
-    $column_widths = ColumnsHelper::columnWidth($column_count, $columns_layout);
-    $column_content = [];
+  public function render(NewsletterEntity $newsletter, $data) {
+    $columnCount = count($data['blocks']);
+    $columnsLayout = isset($data['columnLayout']) ? $data['columnLayout'] : null;
+    $columnWidths = ColumnsHelper::columnWidth($columnCount, $columnsLayout);
+    $columnContent = [];
 
-    foreach($data['blocks'] as $index => $column_blocks) {
-      $rendered_block_element = $this->renderBlocksInColumn($column_blocks, $column_widths[$index]);
-      $column_content[] = $rendered_block_element;
+    foreach ($data['blocks'] as $index => $columnBlocks) {
+      $renderedBlockElement = $this->renderBlocksInColumn($newsletter, $columnBlocks, $columnWidths[$index]);
+      $columnContent[] = $renderedBlockElement;
     }
 
-    return $column_content;
+    return $columnContent;
   }
 
-  private function renderBlocksInColumn($block, $column_base_width) {
-    $block_content = '';
+  private function renderBlocksInColumn(NewsletterEntity $newsletter, $block, $columnBaseWidth) {
+    $blockContent = '';
     $_this = $this;
-    array_map(function($block) use (&$block_content, $column_base_width, $_this) {
-      $rendered_block_element = $_this->createElementFromBlockType($block, $column_base_width);
-      if(isset($block['blocks'])) {
-        $rendered_block_element = $_this->renderBlocksInColumn($block, $column_base_width);
+    array_map(function($block) use (&$blockContent, $columnBaseWidth, $newsletter, $_this) {
+      $renderedBlockElement = $_this->createElementFromBlockType($newsletter, $block, $columnBaseWidth);
+      if (isset($block['blocks'])) {
+        $renderedBlockElement = $_this->renderBlocksInColumn($newsletter, $block, $columnBaseWidth);
         // nested vertical column container is rendered as an array
-        if(is_array($rendered_block_element)) {
-          $rendered_block_element = implode('', $rendered_block_element);
+        if (is_array($renderedBlockElement)) {
+          $renderedBlockElement = implode('', $renderedBlockElement);
         }
       }
 
-      $block_content .= $rendered_block_element;
+      $blockContent .= $renderedBlockElement;
     }, $block['blocks']);
-    return $block_content;
+    return $blockContent;
   }
 
-  function createElementFromBlockType($block, $column_base_width) {
-    if($block['type'] === 'automatedLatestContent') {
-      $content = $this->processAutomatedLatestContent($block, $column_base_width);
-      return $content;
+  public function createElementFromBlockType(NewsletterEntity $newsletter, $block, $columnBaseWidth) {
+    if ($block['type'] === 'automatedLatestContent') {
+      return $this->processAutomatedLatestContent($newsletter, $block, $columnBaseWidth);
     }
     $block = StylesHelper::applyTextAlignment($block);
-    $block_class = __NAMESPACE__ . '\\' . ucfirst($block['type']);
-    if(!class_exists($block_class)) {
-      return '';
+    switch ($block['type']) {
+      case 'button':
+        return $this->button->render($block, $columnBaseWidth);
+      case 'divider':
+        return $this->divider->render($block);
+      case 'footer':
+        return $this->footer->render($block);
+      case 'header':
+        return $this->header->render($block);
+      case 'image':
+        return $this->image->render($block, $columnBaseWidth);
+      case 'social':
+        return $this->social->render($block);
+      case 'spacer':
+        return $this->spacer->render($block);
+      case 'text':
+        return $this->text->render($block);
     }
-    return $block_class::render($block, $column_base_width);
+    return '';
   }
 
-  function automatedLatestContentTransformedPosts($args) {
-    $posts_to_exclude = $this->getPosts();
-    $ALC_posts = $this->ALC->getPosts($args, $posts_to_exclude);
-    foreach($ALC_posts as $post) {
-      $posts_to_exclude[] = $post->ID;
-    }
-    $this->setPosts($posts_to_exclude);
-    return $this->ALC->transformPosts($args, $ALC_posts);
-  }
-
-  function processAutomatedLatestContent($args, $column_base_width) {
-    $transformed_posts = array(
-      'blocks' => $this->automatedLatestContentTransformedPosts($args)
-    );
-    $transformed_posts = StylesHelper::applyTextAlignment($transformed_posts);
-    $rendered_posts = $this->renderBlocksInColumn($transformed_posts, $column_base_width);
-    return $rendered_posts;
-  }
-
-  function getPosts() {
-    return $this->posts;
-  }
-
-  function setPosts($posts) {
-    return $this->posts = $posts;
+  public function processAutomatedLatestContent(NewsletterEntity $newsletter, $args, $columnBaseWidth) {
+    $transformedPosts = [
+      'blocks' => $this->ALC->render($newsletter, $args),
+    ];
+    $transformedPosts = StylesHelper::applyTextAlignment($transformedPosts);
+    return $this->renderBlocksInColumn($newsletter, $transformedPosts, $columnBaseWidth);
   }
 }

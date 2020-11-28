@@ -1,14 +1,34 @@
 <?php
+
 namespace MailPoet\Subscription;
-use MailPoet\Models\Setting;
-use MailPoet\Models\Subscriber;
+
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Settings\SettingsController;
+use MailPoet\Subscribers\SubscriberActions;
+use MailPoet\WP\Functions as WPFunctions;
 
 class Registration {
 
-  static function extendForm() {
-    $label = Setting::getValue(
+  /** @var SettingsController */
+  private $settings;
+
+  /** @var SubscriberActions */
+  private $subscriberActions;
+
+  public function __construct(
+    SettingsController $settings,
+    SubscriberActions $subscriberActions
+  ) {
+    $this->settings = $settings;
+    $this->subscriberActions = $subscriberActions;
+  }
+
+  public function extendForm() {
+    $label = $this->settings->get(
       'subscribe.on_register.label',
-      __('Yes, please add me to your mailing list.', 'mailpoet')
+      WPFunctions::get()->__('Yes, please add me to your mailing list.', 'mailpoet')
     );
 
     print '<p class="registration-form-mailpoet">
@@ -18,18 +38,18 @@ class Registration {
           id="mailpoet_subscribe_on_register"
           value="1"
           name="mailpoet[subscribe_on_register]"
-        />&nbsp;'.esc_attr($label).'
+        />&nbsp;' . esc_attr($label) . '
       </label>
     </p>';
   }
 
-  static function onMultiSiteRegister($result) {
-    if(empty($result['errors']->errors)) {
-      if(
+  public function onMultiSiteRegister($result) {
+    if (empty($result['errors']->errors)) {
+      if (
         isset($_POST['mailpoet']['subscribe_on_register'])
         && (bool)$_POST['mailpoet']['subscribe_on_register'] === true
       ) {
-        static::subscribeNewUser(
+        $this->subscribeNewUser(
           $result['user_name'],
           $result['user_email']
         );
@@ -38,37 +58,35 @@ class Registration {
     return $result;
   }
 
-  static function onRegister(
-    $user_login,
-    $user_email = null,
-    $errors = null
+  public function onRegister(
+    $errors,
+    $userLogin,
+    $userEmail = null
   ) {
-    if(
+    if (
       empty($errors->errors)
       && isset($_POST['mailpoet']['subscribe_on_register'])
       && (bool)$_POST['mailpoet']['subscribe_on_register'] === true
     ) {
-      static::subscribeNewUser(
-        $user_login,
-        $user_email
+      $this->subscribeNewUser(
+        $userLogin,
+        $userEmail
       );
     }
+    return $errors;
   }
 
-  private static function subscribeNewUser($name, $email) {
-    $segment_ids = Setting::getValue(
+  private function subscribeNewUser($name, $email) {
+    $segmentIds = $this->settings->get(
       'subscribe.on_register.segments',
-      array()
+      []
     );
-
-    if(!empty($segment_ids)) {
-      Subscriber::subscribe(
-        array(
-          'email' => $email,
-          'first_name' => $name
-        ),
-        $segment_ids
-      );
-    }
+    $this->subscriberActions->subscribe(
+      [
+        'email' => $email,
+        'first_name' => $name,
+      ],
+      $segmentIds
+    );
   }
 }

@@ -1,21 +1,23 @@
 <?php
+
 namespace MailPoet\API\JSON;
 
-if(!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit;
+
 
 class SuccessResponse extends Response {
   public $data;
 
-  function __construct($data = array(), $meta = array(), $status = self::STATUS_OK) {
+  public function __construct($data = [], $meta = [], $status = self::STATUS_OK) {
     parent::__construct($status, $meta);
     $this->data = $data;
   }
 
-  function getData() {
-    if($this->data === null) return null;
+  public function getData() {
+    if ($this->data === null) return [];
 
-    return array(
-      'data' => $this->data
-    );
+    return [
+      'data' => $this->data,
+    ];
   }
 }

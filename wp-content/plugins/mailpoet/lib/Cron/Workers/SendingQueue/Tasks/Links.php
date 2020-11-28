@@ -1,55 +1,62 @@
 <?php
+
 namespace MailPoet\Cron\Workers\SendingQueue\Tasks;
 
-use MailPoet\Util\Helpers;
-use MailPoet\Router\Router;
-use MailPoet\Models\Setting;
-use MailPoet\Subscription\Url;
-use MailPoet\Models\Subscriber;
-use MailPoet\Router\Endpoints\Track;
-use MailPoet\Newsletter\Links\Links as NewsletterLinks;
-use MailPoet\Models\NewsletterLink as NewsletterLinkModel;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\Models\NewsletterLink as NewsletterLinkModel;
+use MailPoet\Models\Subscriber;
+use MailPoet\Newsletter\Links\Links as NewsletterLinks;
+use MailPoet\Router\Endpoints\Track;
+use MailPoet\Router\Router;
+use MailPoet\Settings\SettingsController;
+use MailPoet\Subscribers\LinkTokens;
+use MailPoet\Subscription\SubscriptionUrlFactory;
+use MailPoet\Util\Helpers;
 
 class Links {
-  static function process($rendered_newsletter, $newsletter, $queue) {
-    list($rendered_newsletter, $links) =
-      self::hashAndReplaceLinks($rendered_newsletter, $newsletter->id, $queue->id);
+  public static function process($renderedNewsletter, $newsletter, $queue) {
+    list($renderedNewsletter, $links) =
+      self::hashAndReplaceLinks($renderedNewsletter, $newsletter->id, $queue->id);
     self::saveLinks($links, $newsletter, $queue);
-    return $rendered_newsletter;
+    return $renderedNewsletter;
   }
 
-  static function hashAndReplaceLinks($rendered_newsletter, $newsletter_id, $queue_id) {
+  public static function hashAndReplaceLinks($renderedNewsletter, $newsletterId, $queueId) {
     // join HTML and TEXT rendered body into a text string
-    $content = Helpers::joinObject($rendered_newsletter);
-    list($content, $links) = NewsletterLinks::process($content, $newsletter_id, $queue_id);
+    $content = Helpers::joinObject($renderedNewsletter);
+    list($content, $links) = NewsletterLinks::process($content, $newsletterId, $queueId);
+    $links = NewsletterLinks::ensureInstantUnsubscribeLink($links);
     // split the processed body with hashed links back to HTML and TEXT
-    list($rendered_newsletter['html'], $rendered_newsletter['text'])
+    list($renderedNewsletter['html'], $renderedNewsletter['text'])
       = Helpers::splitObject($content);
-    return array(
-      $rendered_newsletter,
-      $links
-    );
+    return [
+      $renderedNewsletter,
+      $links,
+    ];
   }
 
-  static function saveLinks($links, $newsletter, $queue) {
+  public static function saveLinks($links, $newsletter, $queue) {
     return NewsletterLinks::save($links, $newsletter->id, $queue->id);
   }
 
-  static function getUnsubscribeUrl($queue, $subscriber_id) {
-    $subscriber = Subscriber::where('id', $subscriber_id)->findOne();
-    
-    if((boolean)Setting::getValue('tracking.enabled')) {
-      $link_hash = NewsletterLinkModel::where('queue_id', $queue->id)
-        ->where('url', '[link:subscription_unsubscribe_url]')
-        ->findOne()
-        ->hash;
+  public static function getUnsubscribeUrl($queue, $subscriberId) {
+    $subscriber = Subscriber::where('id', $subscriberId)->findOne();
+    $settings = SettingsController::getInstance();
+    if ((boolean)$settings->get('tracking.enabled')) {
+      $linkHash = NewsletterLinkModel::where('queue_id', $queue->id)
+        ->where('url', NewsletterLinkModel::INSTANT_UNSUBSCRIBE_LINK_SHORT_CODE)
+        ->findOne();
+      if (!$linkHash instanceof NewsletterLinkModel) {
+        return '';
+      }
+      $linkTokens = new LinkTokens;
       $data = NewsletterLinks::createUrlDataObject(
-        $subscriber->id, 
-        $subscriber->email,
-        $queue->id, 
-        $link_hash, 
+        $subscriber->id,
+        $linkTokens->getToken($subscriber),
+        $queue->id,
+        $linkHash->hash,
         false
       );
       $url = Router::buildRequest(
@@ -58,7 +65,8 @@ class Links {
         $data
       );
     } else {
-      $url = Url::getUnsubscribeUrl($subscriber);
+      $subscriptionUrlFactory = SubscriptionUrlFactory::getInstance();
+      $url = $subscriptionUrlFactory->getUnsubscribeUrl($subscriber, $queue->id);
     }
     return $url;
   }

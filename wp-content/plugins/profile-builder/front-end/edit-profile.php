@@ -1,4 +1,6 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
 /*
 	wp_update_user only attempts to clear and reset cookies if it's updating the password.
 	The php function setcookie(), used in both the cookie-clearing and cookie-resetting functions, 
@@ -8,8 +10,8 @@
 /* set action to login user after password changed in edit profile */
 add_action( 'init', 'wppb_autologin_after_password_changed' );
 function wppb_autologin_after_password_changed(){
-    if( isset( $_POST['action'] ) && $_POST['action'] == 'edit_profile' ){
-        if( isset( $_POST['passw1'] ) && !empty( $_POST['passw1'] ) && !empty( $_POST['form_name'] ) ){
+    if( isset( $_POST['action'] ) && $_POST['action'] === 'edit_profile' ){
+        if( isset( $_POST['passw1'] ) && !empty( $_POST['passw1'] ) && !empty( $_POST['form_name'] ) && isset(  $_POST['edit_profile_'. $_POST['form_name'] .'_nonce_field'] ) && wp_verify_nonce( $_POST['edit_profile_'. $_POST['form_name'] .'_nonce_field'], 'wppb_verify_form_submission' ) ){
 
             /* all the error checking filters are defined in each field file so we need them here */
             if ( file_exists ( WPPB_PLUGIN_DIR.'/front-end/default-fields/default-fields.php' ) )

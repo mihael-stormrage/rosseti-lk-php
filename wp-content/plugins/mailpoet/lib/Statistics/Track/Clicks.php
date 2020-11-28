@@ -1,63 +1,152 @@
 <?php
+
 namespace MailPoet\Statistics\Track;
 
-use MailPoet\Models\StatisticsClicks;
-use MailPoet\Newsletter\Shortcodes\Categories\Link;
-use MailPoet\Newsletter\Shortcodes\Shortcodes;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\Entities\NewsletterEntity;
+use MailPoet\Entities\NewsletterLinkEntity;
+use MailPoet\Entities\SendingQueueEntity;
+use MailPoet\Entities\SubscriberEntity;
+use MailPoet\Models\StatisticsClicks;
+use MailPoet\Newsletter\Shortcodes\Categories\Link as LinkShortcodeCategory;
+use MailPoet\Newsletter\Shortcodes\Shortcodes;
+use MailPoet\Settings\SettingsController;
+use MailPoet\Util\Cookies;
+use MailPoet\WP\Functions as WPFunctions;
 
 class Clicks {
-  function track($data) {
-    if(!$data || empty($data->link)) {
+
+  const REVENUE_TRACKING_COOKIE_NAME = 'mailpoet_revenue_tracking';
+  const REVENUE_TRACKING_COOKIE_EXPIRY = 60 * 60 * 24 * 14;
+
+  const ABANDONED_CART_COOKIE_NAME = 'mailpoet_abandoned_cart_tracking';
+  const ABANDONED_CART_COOKIE_EXPIRY = 10 * 365 * 24 * 60 * 60; // 10 years (~ no expiry)
+
+  /** @var SettingsController */
+  private $settingsController;
+
+  /** @var Cookies */
+  private $cookies;
+
+  /** @var Shortcodes */
+  private $shortcodes;
+
+  /** @var LinkShortcodeCategory */
+  private $linkShortcodeCategory;
+
+  public function __construct(
+    SettingsController $settingsController,
+    Cookies $cookies,
+    Shortcodes $shortcodes,
+    LinkShortcodeCategory $linkShortcodeCategory
+  ) {
+    $this->settingsController = $settingsController;
+    $this->cookies = $cookies;
+    $this->shortcodes = $shortcodes;
+    $this->linkShortcodeCategory = $linkShortcodeCategory;
+  }
+
+  /**
+   * @param \stdClass|null $data
+   */
+  public function track($data) {
+    if (!$data || empty($data->link)) {
       return $this->abort();
     }
+    /** @var SubscriberEntity $subscriber */
     $subscriber = $data->subscriber;
+    /** @var SendingQueueEntity $queue */
     $queue = $data->queue;
+    /** @var NewsletterEntity $newsletter */
     $newsletter = $data->newsletter;
+    /** @var NewsletterLinkEntity $link */
     $link = $data->link;
-    $wp_user_preview = ($data->preview && $subscriber->isWPUser());
+    $wpUserPreview = ($data->preview && ($subscriber->isWPUser()));
     // log statistics only if the action did not come from
     // a WP user previewing the newsletter
-    if(!$wp_user_preview) {
-      StatisticsClicks::createOrUpdateClickCount(
-        $link->id,
-        $subscriber->id,
-        $newsletter->id,
-        $queue->id
+    if (!$wpUserPreview) {
+      $statisticsClicks = StatisticsClicks::createOrUpdateClickCount(
+        $link->getId(),
+        $subscriber->getId(),
+        $newsletter->getId(),
+        $queue->getId()
       );
+      $this->sendRevenueCookie($statisticsClicks);
+      $this->sendAbandonedCartCookie($subscriber);
       // track open event
-      $open_event = new Opens();
-      $open_event->track($data, $display_image = false);
+      $openEvent = new Opens();
+      $openEvent->track($data, $displayImage = false);
     }
-    $url = $this->processUrl($link->url, $newsletter, $subscriber, $queue, $wp_user_preview);
+    $url = $this->processUrl($link->getUrl(), $newsletter, $subscriber, $queue, $wpUserPreview);
     $this->redirectToUrl($url);
   }
 
-  function processUrl($url, $newsletter, $subscriber, $queue, $wp_user_preview) {
-    if(preg_match('/\[link:(?P<action>.*?)\]/', $url, $shortcode)) {
-      if(!$shortcode['action']) $this->abort();
-      $url = Link::processShortcodeAction(
+  private function sendRevenueCookie(StatisticsClicks $clicks) {
+    if ($this->settingsController->get('woocommerce.accept_cookie_revenue_tracking.enabled')) {
+      $this->cookies->set(
+        self::REVENUE_TRACKING_COOKIE_NAME,
+        [
+          'statistics_clicks' => $clicks->id,
+          'created_at' => time(),
+        ],
+        [
+          'expires' => time() + self::REVENUE_TRACKING_COOKIE_EXPIRY,
+          'path' => '/',
+        ]
+      );
+    }
+  }
+
+  private function sendAbandonedCartCookie($subscriber) {
+    if ($this->settingsController->get('woocommerce.accept_cookie_revenue_tracking.enabled')) {
+      $this->cookies->set(
+        self::ABANDONED_CART_COOKIE_NAME,
+        [
+          'subscriber_id' => $subscriber->getId(),
+        ],
+        [
+          'expires' => time() + self::ABANDONED_CART_COOKIE_EXPIRY,
+          'path' => '/',
+        ]
+      );
+    }
+  }
+
+  public function processUrl(
+    string $url,
+    NewsletterEntity $newsletter,
+    SubscriberEntity $subscriber,
+    SendingQueueEntity $queue,
+    bool $wpUserPreview
+  ) {
+    if (preg_match('/\[link:(?P<action>.*?)\]/', $url, $shortcode)) {
+      if (!$shortcode['action']) $this->abort();
+      $url = $this->linkShortcodeCategory->processShortcodeAction(
         $shortcode['action'],
         $newsletter,
         $subscriber,
         $queue,
-        $wp_user_preview
+        $wpUserPreview
       );
     } else {
-      $shortcodes = new Shortcodes($newsletter, $subscriber, $queue, $wp_user_preview);
-      $url = $shortcodes->replace($url);
+      $this->shortcodes->setQueue($queue);
+      $this->shortcodes->setNewsletter($newsletter);
+      $this->shortcodes->setSubscriber($subscriber);
+      $this->shortcodes->setWpUserPreview($wpUserPreview);
+      $url = $this->shortcodes->replace($url);
     }
     return $url;
   }
 
-  function abort() {
-    status_header(404);
-    get_template_part((string)404);
+  public function abort() {
+    WPFunctions::get()->statusHeader(404);
+    WPFunctions::get()->getTemplatePart((string)404);
     exit;
   }
 
-  function redirectToUrl($url) {
+  public function redirectToUrl($url) {
     header('Location: ' . $url, true, 302);
     exit;
   }

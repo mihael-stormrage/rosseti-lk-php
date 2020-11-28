@@ -1,24 +1,28 @@
 <?php
+
 namespace MailPoet\Util;
+
+if (!defined('ABSPATH')) exit;
+
 
 class Helpers {
   const DIVIDER = '***MailPoet***';
   const LINK_TAG = 'link';
 
-  static function isJson($string) {
-    if(!is_string($string)) return false;
+  public static function isJson($string) {
+    if (!is_string($string)) return false;
     json_decode($string);
     return json_last_error() == JSON_ERROR_NONE;
   }
 
-  static function replaceLinkTags($source, $link = false, $attributes = array(), $link_tag = false) {
-    if(!$link) return $source;
-    $link_tag = ($link_tag) ? $link_tag : self::LINK_TAG;
+  public static function replaceLinkTags($source, $link = false, $attributes = [], $linkTag = false) {
+    if (!$link) return $source;
+    $linkTag = ($linkTag) ? $linkTag : self::LINK_TAG;
     $attributes = array_map(function($key) use ($attributes) {
       return sprintf('%s="%s"', $key, $attributes[$key]);
     }, array_keys($attributes));
     $source = str_replace(
-      '[' . $link_tag . ']',
+      '[' . $linkTag . ']',
       sprintf(
         '<a %s href="%s">',
         join(' ', $attributes),
@@ -26,14 +30,17 @@ class Helpers {
       ),
       $source
     );
-    $source = str_replace('[/' . $link_tag . ']', '</a>', $source);
+    $source = str_replace('[/' . $linkTag . ']', '</a>', $source);
     return preg_replace('/\s+/', ' ', $source);
   }
 
-  static function getMaxPostSize($bytes = false) {
+  public static function getMaxPostSize($bytes = false) {
     $maxPostSize = ini_get('post_max_size');
-    if(!$bytes) return $maxPostSize;
-    switch(substr($maxPostSize, -1)) {
+    if (!$bytes) return $maxPostSize;
+    if ($maxPostSize === false) {
+      return 0;
+    }
+    switch (substr($maxPostSize, -1)) {
       case 'M':
       case 'm':
         return (int)$maxPostSize * 1048576;
@@ -48,17 +55,17 @@ class Helpers {
     }
   }
 
-  static function flattenArray($array) {
-    if(!$array) return;
-    $flattened_array = array();
-    array_walk_recursive($array, function ($a) use (&$flattened_array) {
-      $flattened_array[] = $a;
+  public static function flattenArray($array) {
+    if (!$array) return;
+    $flattenedArray = [];
+    array_walk_recursive($array, function ($a) use (&$flattenedArray) {
+      $flattenedArray[] = $a;
     });
-    return $flattened_array;
+    return $flattenedArray;
   }
 
-  static function underscoreToCamelCase($str, $capitalise_first_char = false) {
-    if($capitalise_first_char) {
+  public static function underscoreToCamelCase($str, $capitaliseFirstChar = false) {
+    if ($capitaliseFirstChar) {
       $str[0] = strtoupper($str[0]);
     }
     return preg_replace_callback('/_([a-z])/', function ($c) {
@@ -66,33 +73,36 @@ class Helpers {
     }, $str);
   }
 
-  static function camelCaseToUnderscore($str) {
+  public static function camelCaseToUnderscore($str) {
     $str[0] = strtolower($str[0]);
     return preg_replace_callback('/([A-Z])/', function ($c) {
       return "_" . strtolower($c[1]);
     }, $str);
   }
 
-  static function joinObject($object = array()) {
+  public static function joinObject($object = []) {
     return implode(self::DIVIDER, $object);
   }
 
-  static function splitObject($object = array()) {
+  public static function splitObject($object = []) {
     return explode(self::DIVIDER, $object);
   }
 
-  static function getIP() {
+  public static function getIP() {
     return (isset($_SERVER['REMOTE_ADDR']))
       ? $_SERVER['REMOTE_ADDR']
       : null;
   }
 
-  static function recursiveTrim($value) {
-    if(is_array($value))
+  public static function recursiveTrim($value) {
+    if (is_array($value))
       return array_map([__CLASS__, 'recursiveTrim'], $value);
-    if(is_string($value))
+    if (is_string($value))
       return trim($value);
     return $value;
   }
 
+  public static function escapeSearch(string $search): string {
+    return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], trim($search)); // escape for 'LIKE'
+  }
 }

@@ -1,13 +1,2 @@
 <?php
-
-/**
- * @license http://www.opensource.org/licenses/mit-license.php MIT (see the LICENSE file)
- */
-namespace MailPoetVendor\Psr\Container;
-
-/**
- * Base interface representing a generic exception in a container.
- */
-interface ContainerExceptionInterface
-{
-}
+ namespace MailPoetVendor\Psr\Container; if (!defined('ABSPATH')) exit; interface ContainerExceptionInterface { } 

@@ -1,26 +1,46 @@
 <?php
+
 namespace MailPoet\Subscription;
-use MailPoet\Models\Setting;
-use MailPoet\Models\Subscriber;
+
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Settings\SettingsController;
+use MailPoet\Subscribers\SubscriberActions;
+use MailPoet\WP\Functions as WPFunctions;
 
 class Comment {
   const SPAM = 'spam';
   const APPROVED = 1;
   const PENDING_APPROVAL = 0;
 
-  static function extendLoggedInForm($field) {
-    $field .= self::getSubscriptionField();
+  /** @var SettingsController */
+  private $settings;
+
+  /** @var SubscriberActions */
+  private $subscriberActions;
+
+  public function __construct(
+    SettingsController $settings,
+    SubscriberActions $subscriberActions
+  ) {
+    $this->settings = $settings;
+    $this->subscriberActions = $subscriberActions;
+  }
+
+  public function extendLoggedInForm($field) {
+    $field .= $this->getSubscriptionField();
     return $field;
   }
 
-  static function extendLoggedOutForm() {
-    echo self::getSubscriptionField();
+  public function extendLoggedOutForm() {
+    echo $this->getSubscriptionField();
   }
 
-  static function getSubscriptionField() {
-    $label = Setting::getValue(
+  private function getSubscriptionField() {
+    $label = $this->settings->get(
       'subscribe.on_comment.label',
-      __('Yes, please add me to your mailing list.', 'mailpoet')
+      WPFunctions::get()->__('Yes, please add me to your mailing list.', 'mailpoet')
     );
 
     return '<p class="comment-form-mailpoet">
@@ -30,64 +50,64 @@ class Comment {
           id="mailpoet_subscribe_on_comment"
           value="1"
           name="mailpoet[subscribe_on_comment]"
-        />&nbsp;'.esc_attr($label).'
+        />&nbsp;' . esc_attr($label) . '
       </label>
     </p>';
   }
 
-  static function onSubmit($comment_id, $comment_status) {
-    if($comment_status === Comment::SPAM) return;
+  public function onSubmit($commentId, $commentStatus) {
+    if ($commentStatus === Comment::SPAM) return;
 
-    if(
+    if (
       isset($_POST['mailpoet']['subscribe_on_comment'])
       && (bool)$_POST['mailpoet']['subscribe_on_comment'] === true
     ) {
-      if($comment_status === Comment::PENDING_APPROVAL) {
+      if ($commentStatus === Comment::PENDING_APPROVAL) {
         // add a comment meta to remember to subscribe the user
         // once the comment gets approved
-        add_comment_meta(
-          $comment_id,
+        WPFunctions::get()->addCommentMeta(
+          $commentId,
           'mailpoet',
           'subscribe_on_comment',
           true
         );
-      } else if($comment_status === Comment::APPROVED) {
-        static::subscribeAuthorOfComment($comment_id);
+      } else if ($commentStatus === Comment::APPROVED) {
+        $this->subscribeAuthorOfComment($commentId);
       }
     }
   }
 
-  static function onStatusUpdate($comment_id, $action) {
-    if($action === 'approve') {
+  public function onStatusUpdate($commentId, $action) {
+    if ($action === 'approve') {
       // check if the comment's author wants to subscribe
-      $do_subscribe = (
-        get_comment_meta(
-          $comment_id,
+      $doSubscribe = (
+        WPFunctions::get()->getCommentMeta(
+          $commentId,
           'mailpoet',
           true
         ) === 'subscribe_on_comment'
       );
 
-      if($do_subscribe === true) {
-        static::subscribeAuthorOfComment($comment_id);
+      if ($doSubscribe === true) {
+        $this->subscribeAuthorOfComment($commentId);
 
-        delete_comment_meta($comment_id, 'mailpoet');
+        WPFunctions::get()->deleteCommentMeta($commentId, 'mailpoet');
       }
     }
   }
 
-  private static function subscribeAuthorOfComment($comment_id) {
-    $segment_ids = Setting::getValue('subscribe.on_comment.segments', array());
+  private function subscribeAuthorOfComment($commentId) {
+    $segmentIds = $this->settings->get('subscribe.on_comment.segments', []);
 
-    if(!empty($segment_ids)) {
-      $comment = get_comment($comment_id);
+    if (!empty($segmentIds)) {
+      $comment = WPFunctions::get()->getComment($commentId);
 
-      $result = Subscriber::subscribe(
-        array(
-          'email' => $comment->comment_author_email,
-          'first_name' => $comment->comment_author
-        ),
-        $segment_ids
+      $result = $this->subscriberActions->subscribe(
+        [
+          'email' => $comment->comment_author_email, // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+          'first_name' => $comment->comment_author, // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        ],
+        $segmentIds
       );
     }
   }

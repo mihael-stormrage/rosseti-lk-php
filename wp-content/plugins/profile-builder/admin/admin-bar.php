@@ -1,4 +1,5 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 /**
  * Function that creates the "Show/Hide the Admin Bar on the Front-End" submenu page
  *
@@ -45,6 +46,8 @@ function wppb_show_hide_admin_bar_content() {
 	<div class="wrap wppb-wrap wppb-admin-bar">
 	
 		<h2><?php _e( 'Admin Bar Settings', 'profile-builder' );?></h2>
+
+        <?php settings_errors(); ?>
 
 		<?php wppb_generate_settings_tabs() ?>
 

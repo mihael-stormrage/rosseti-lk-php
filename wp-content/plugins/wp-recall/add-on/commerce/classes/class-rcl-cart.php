@@ -2,195 +2,190 @@
 
 class Rcl_Cart {
 
-    public $products = array();
-    public $order_price = 0;
-    public $products_amount = 0;
-    public $cart_url = '#';
+	public $products		 = array();
+	public $order_price		 = 0;
+	public $products_amount	 = 0;
+	public $cart_url		 = '#';
 
-    function __construct($args = false) {
-        global $rmag_options;
-        
-        if(isset($rmag_options['basket_page_rmag']))
-            $this->cart_url = get_permalink($rmag_options['basket_page_rmag']);
+	function __construct( $args = false ) {
 
-        $this->products = (isset($args['cart_products']) && $args['cart_products'])? $args['cart_products']: $this->get_cookie();
+		if ( $page_id		 = rcl_get_commerce_option( 'basket_page_rmag' ) )
+			$this->cart_url	 = get_permalink( $page_id );
 
-        $this->init_cart_data();
+		$this->products = (isset( $args['cart_products'] ) && $args['cart_products']) ? $args['cart_products'] : $this->get_cookie();
 
-    }
+		$this->init_cart_data();
+	}
 
-    function get_cookie(){
+	function get_cookie() {
 
-        if(!isset($_COOKIE['rcl_cart']))
-            return array();
+		if ( ! isset( $_COOKIE['rcl_cart'] ) )
+			return array();
 
-        return json_decode(wp_unslash($_COOKIE['rcl_cart']));
-    }
+		return json_decode( wp_unslash( $_COOKIE['rcl_cart'] ) );
+	}
 
-    function init_cart_data(){
+	function init_cart_data() {
 
-        if($this->products){
+		if ( $this->products ) {
 
-            foreach($this->products as $product){
+			foreach ( $this->products as $k => $product ) {
 
-                $this->products_amount += $product->product_amount;
-                $this->order_price += $product->product_amount * $product->product_price;
+				$product_amount = $product->product_amount;
 
-            }
+				if ( $product_amount < 0 ) {
+					$product_amount						 = absint( $product_amount );
+					$this->products[$k]->product_amount	 = $product_amount;
+				}
 
-        }
+				$this->products_amount += $product_amount;
+				$this->order_price += $product_amount * $product->product_price;
+			}
+		}
+	}
 
-    }
+	function get_product( $product_id ) {
 
-    function get_product($product_id){
+		$key = $this->search_product( $product_id );
 
-        $key = $this->search_product($product_id);
+		if ( $key !== false ) {
 
-        if($key !== false){
+			return $this->products[$key];
+		}
 
-            return $this->products[$key];
+		return false;
+	}
 
-        }
+	function add_product( $product_id, $args ) {
 
-        return false;
+		$qls	 = (isset( $args['quantity'] ) && $args['quantity']) ? $args['quantity'] : 1;
+		$vars	 = (isset( $args['variations'] ) && $args['variations']) ? $this->add_variations_title( $product_id, $args['variations'] ) : false;
 
-    }
+		$productPrice = new Rcl_Product_Price( $product_id );
 
-    function add_product($product_id,$args){
+		$product_price = $productPrice->get_price( $vars );
 
-        $qls = (isset($args['quantity']) && $args['quantity'])? $args['quantity']: 1;
-        $vars = (isset($args['variations']) && $args['variations'])? $this->add_variations_title($product_id,$args['variations']): false;
+		if ( ! $product_price )
+			$product_price = 0;
 
-        $productPrice = new Rcl_Product_Price($product_id);
+		$key = $this->search_product( $product_id, $vars );
 
-        $product_price = $productPrice->get_price($vars);
+		if ( $key !== false ) {
 
-        if(!$product_price)
-            $product_price = 0;
+			$this->products[$key]->product_amount += $qls;
+		} else {
 
-        $key = $this->search_product($product_id,$vars);
+			$this->products[] = array(
+				'product_id'	 => $product_id,
+				'product_price'	 => $product_price,
+				'product_amount' => $qls,
+				'variations'	 => $vars
+			);
+		}
 
-        if($key !== false){
+		$this->products_amount += $qls;
+		$this->order_price += $product_price;
 
-            $this->products[$key]->product_amount += $qls;
+		$this->update_cart();
 
-        }else{
+		return true;
+	}
 
-            $this->products[] = array(
-                'product_id' => $product_id,
-                'product_price' => $product_price,
-                'product_amount' => $qls,
-                'variations' => $vars
-            );
+	function remove_product( $product_id ) {
 
-        }
+		$key = $this->search_product( $product_id );
 
-        $this->products_amount += $qls;
-        $this->order_price += $product_price;
+		if ( $key === false )
+			return false;
 
-        $this->update_cart();
+		$amount			 = $this->products[$key]->product_amount;
+		$product_price	 = $this->products[$key]->product_price;
 
-        return true;
+		if ( ! $amount )
+			return false;
 
-    }
+		$this->products_amount --;
+		$this->order_price -= $product_price;
 
-    function remove_product($product_id){
+		if ( $amount > 1 ) {
 
-        $key = $this->search_product($product_id);
+			$this->products[$key]->product_amount -= 1;
+		} else {
 
-        if($key === false) return false;
+			unset( $this->products[$key] );
+		}
 
-        $amount = $this->products[$key]->product_amount;
-        $product_price = $this->products[$key]->product_price;
+		$this->update_cart();
 
-        if(!$amount) return false;
+		return true;
+	}
 
-        $this->products_amount --;
-        $this->order_price -= $product_price;
+	function search_product( $product_id, $vars = false ) {
 
-        if($amount > 1){
+		if ( ! $this->products )
+			return false;
 
-            $this->products[$key]->product_amount -= 1;
+		$Vars = new Rcl_Product_Variations( array( 'product_id' => $product_id ) );
 
-        }else{
+		$productVars = $Vars->get_product_variations();
 
-            unset($this->products[$key]);
+		if ( $productVars )
+			$varsHash = md5( json_encode( $vars ) );
 
-        }
+		foreach ( $this->products as $key => $product ) {
 
-        $this->update_cart();
+			if ( ! $product || ! is_object( $product ) )
+				continue;
 
-        return true;
+			if ( $product->product_id == $product_id ) {
 
-    }
+				if ( ! $productVars )
+					return $key;
 
-    function search_product($product_id, $vars = false){
+				if ( ! $vars )
+					return $key;
 
-        if(!$this->products) return false;
+				$productHash = md5( json_encode( ( array ) $product->variations ) );
 
-        $Vars = new Rcl_Product_Variations(array('product_id'=>$product_id));
+				if ( $productHash == $varsHash )
+					return $key;
+			}
+		}
 
-        $productVars = $Vars->get_product_variations();
+		return false;
+	}
 
-        if($productVars)
-            $varsHash = md5(json_encode($vars));
+	function add_variations_title( $product_id, $vars ) {
 
-        foreach($this->products as $key => $product){
+		$Vars = new Rcl_Product_Variations( array( 'product_id' => $product_id ) );
 
-            if($product->product_id == $product_id){
+		//получаем все текущие вариации товара
+		$productVars = $Vars->get_product_variations();
 
-                if(!$productVars)
-                    return $key;
+		$newVars = array();
+		foreach ( $productVars as $var ) {
 
-               if(!$vars)
-                   return $key;
+			if ( ! isset( $vars[$var['slug']] ) )
+				continue;
 
-                $productHash = md5(json_encode((array)$product->variations));
+			$newVars[$var['slug']] = array(
+				$Vars->get_variation_title( $var['slug'] ), //заголовок вариации
+				$vars[$var['slug']] //значение
+			);
+		}
 
-                if($productHash == $varsHash)
-                    return $key;
+		return $newVars;
+	}
 
-            }
+	function reset_cart() {
 
-        }
+		$this->products = array();
 
-        return false;
+		$this->update_cart();
+	}
 
-    }
-
-    function add_variations_title($product_id,$vars){
-
-        $Vars = new Rcl_Product_Variations(array('product_id'=>$product_id));
-
-        //получаем все текущие вариации товара
-        $productVars = $Vars->get_product_variations();
-
-        $newVars = array();
-        foreach($productVars as $var){
-
-            if(!isset($vars[$var['slug']])) continue;
-
-            $newVars[$var['slug']] = array(
-                $Vars->get_variation_title($var['slug']), //заголовок вариации
-                $vars[$var['slug']] //значение
-            );
-
-        }
-
-        return $newVars;
-
-    }
-
-    function reset_cart(){
-
-        $this->products = array();
-
-        $this->update_cart();
-
-    }
-
-    function update_cart(){
-        setcookie('rcl_cart',json_encode($this->products),time(),'/');
-    }
+	function update_cart() {
+		setcookie( 'rcl_cart', json_encode( $this->products ), time(), '/' );
+	}
 
 }

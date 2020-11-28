@@ -1,26 +1,34 @@
 <?php
+
 namespace MailPoet\Mailer\Methods\ErrorMappers;
 
-use MailPoet\Mailer\MailerError;
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Mailer\Mailer;
+use MailPoet\Mailer\MailerError;
 use MailPoet\Mailer\SubscriberError;
+use MailPoet\WP\Functions as WPFunctions;
 
 class PHPMailMapper {
+  use BlacklistErrorMapperTrait;
   use ConnectionErrorMapperTrait;
 
-  function getErrorFromException(\Exception $e, $subscriber) {
+  const METHOD = Mailer::METHOD_PHPMAIL;
+
+  public function getErrorFromException(\Exception $e, $subscriber) {
     $level = MailerError::LEVEL_HARD;
-    if(strpos($e->getMessage(), 'Invalid address') === 0) {
+    if (strpos($e->getMessage(), 'Invalid address') === 0) {
       $level = MailerError::LEVEL_SOFT;
     }
 
-    $subscriber_errors = [new SubscriberError($subscriber, null)];
-    return new MailerError(MailerError::OPERATION_SEND, $level, $e->getMessage(), null, $subscriber_errors);
+    $subscriberErrors = [new SubscriberError($subscriber, null)];
+    return new MailerError(MailerError::OPERATION_SEND, $level, $e->getMessage(), null, $subscriberErrors);
   }
 
-  function getErrorForSubscriber($subscriber) {
-    $message = sprintf(__('%s has returned an unknown error.', 'mailpoet'), Mailer::METHOD_PHPMAIL);
-    $subscriber_errors = [new SubscriberError($subscriber, null)];
-    return new MailerError(MailerError::OPERATION_SEND, MailerError::LEVEL_HARD, $message, null, $subscriber_errors);
+  public function getErrorForSubscriber($subscriber) {
+    $message = sprintf(WPFunctions::get()->__('%s has returned an unknown error.', 'mailpoet'), Mailer::METHOD_PHPMAIL);
+    $subscriberErrors = [new SubscriberError($subscriber, null)];
+    return new MailerError(MailerError::OPERATION_SEND, MailerError::LEVEL_HARD, $message, null, $subscriberErrors);
   }
 }

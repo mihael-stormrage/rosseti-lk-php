@@ -1,257 +1,264 @@
 <?php
+
 namespace MailPoet\Config\PopulatorData\Templates;
 
-if(!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
 
 class NewsletterBlank1Column {
 
-  function __construct($assets_url) {
+  private $assets_url;
+  private $external_template_image_url;
+  private $template_image_url;
+  private $social_icon_url;
+
+  public function __construct($assets_url) {
     $this->assets_url = $assets_url;
     $this->external_template_image_url = 'https://ps.w.org/mailpoet/assets/newsletter-templates/newsletter-blank-1-column';
     $this->template_image_url = $this->assets_url . '/img/blank_templates';
     $this->social_icon_url = $this->assets_url . '/img/newsletter_editor/social-icons';
   }
 
-  function get() {
-    return array(
-      'name' => __("Newsletter: Blank 1 Column", 'mailpoet'),
-      'categories' => json_encode(array('standard')),
+  public function get() {
+    return [
+      'name' => WPFunctions::get()->__("Newsletter: Blank 1 Column", 'mailpoet'),
+      'categories' => json_encode(['standard', 'blank']),
       'readonly' => 1,
       'thumbnail' => $this->getThumbnail(),
       'body' => json_encode($this->getBody()),
-    );
+    ];
   }
 
   private function getBody() {
-    return array(
-      "content" => array(
+    return [
+      "content" => [
         "type" => "container",
         "orientation" => "vertical",
-        "styles" => array(
-          "block" => array(
-            "backgroundColor" => "transparent"
-          )
-        ),
-        "blocks" => array(
-          array(
+        "styles" => [
+          "block" => [
+            "backgroundColor" => "transparent",
+          ],
+        ],
+        "blocks" => [
+          [
             "type" => "container",
             "orientation" => "horizontal",
-            "styles" => array(
-              "block" => array(
-                "backgroundColor" => "#f8f8f8"
-              )
-            ),
-            "blocks" => array(
-              array(
+            "styles" => [
+              "block" => [
+                "backgroundColor" => "#f8f8f8",
+              ],
+            ],
+            "blocks" => [
+              [
                 "type" => "container",
                 "orientation" => "vertical",
-                "styles" => array(
-                  "block" => array(
-                    "backgroundColor" => "transparent"
-                  )
-                ),
-                "blocks" => array(
-                  array(
+                "styles" => [
+                  "block" => [
+                    "backgroundColor" => "transparent",
+                  ],
+                ],
+                "blocks" => [
+                  [
                     "type" => "header",
-                    "text" => __("Display problems? <a href=\"[link:newsletter_view_in_browser_url]\">Open this email in your web browser.</a>", 'mailpoet'),
-                    "styles" => array(
-                      "block" => array(
-                        "backgroundColor" => "transparent"
-                      ),
-                      "text" => array(
+                    "text" => '<a href="[link:newsletter_view_in_browser_url]">'.WPFunctions::get()->__("View this in your browser.", 'mailpoet').'</a>',
+                    "styles" => [
+                      "block" => [
+                        "backgroundColor" => "transparent",
+                      ],
+                      "text" => [
                         "fontColor" => "#222222",
                         "fontFamily" => "Arial",
                         "fontSize" => "12px",
-                        "textAlign" => "center"
-                      ),
-                      "link" => array(
+                        "textAlign" => "center",
+                      ],
+                      "link" => [
                         "fontColor" => "#6cb7d4",
-                        "textDecoration" => "underline"
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          ),
-          array(
+                        "textDecoration" => "underline",
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          [
             "type" => "container",
             "orientation" => "horizontal",
-            "styles" => array(
-              "block" => array(
-                "backgroundColor" => "#ffffff"
-              )
-            ),
-            "blocks" => array(
-              array(
+            "styles" => [
+              "block" => [
+                "backgroundColor" => "#ffffff",
+              ],
+            ],
+            "blocks" => [
+              [
                 "type" => "container",
                 "orientation" => "vertical",
-                "styles" => array(
-                  "block" => array(
-                    "backgroundColor" => "transparent"
-                  )
-                ),
-                "blocks" => array(
-                  array(
+                "styles" => [
+                  "block" => [
+                    "backgroundColor" => "transparent",
+                  ],
+                ],
+                "blocks" => [
+                  [
                     "type" => "spacer",
-                    "styles" => array(
-                      "block" => array(
+                    "styles" => [
+                      "block" => [
                         "backgroundColor" => "transparent",
-                        "height" => "30px"
-                      )
-                    )
-                  ),
-                  array(
+                        "height" => "30px",
+                      ],
+                    ],
+                  ],
+                  [
                     "type" => "image",
                     "link" => "",
                     "src" => $this->template_image_url . "/fake-logo.png",
-                    "alt" => __("Fake logo", 'mailpoet'),
+                    "alt" => WPFunctions::get()->__("Fake logo", 'mailpoet'),
                     "fullWidth" => false,
                     "width" => "598px",
                     "height" => "71px",
-                    "styles" => array(
-                      "block" => array(
-                        "textAlign" => "center"
-                      )
-                    )
-                  ),
-                  array(
+                    "styles" => [
+                      "block" => [
+                        "textAlign" => "center",
+                      ],
+                    ],
+                  ],
+                  [
                     "type" => "text",
-                    "text" => __("<h1 style=\"text-align: center;\"><strong>Let's Get Started! </strong></h1>\n<p>&nbsp;</p>\n<p>It's time to design your newsletter! In the right sidebar, you'll find 4 menu items that will help you customize your newsletter:</p>\n<ol>\n<li>Content</li>\n<li>Columns</li>\n<li>Styles</li>\n<li>Preview</li>\n</ol>", 'mailpoet')
-                  )
-                )
-              )
-            )
-          ),
-          array(
+                    "text" => WPFunctions::get()->__("<h1 style=\"text-align: center;\"><strong>Let's Get Started! </strong></h1>\n<p>&nbsp;</p>\n<p>It's time to design your newsletter! In the right sidebar, you'll find 4 menu items that will help you customize your newsletter:</p>\n<ol>\n<li>Content</li>\n<li>Columns</li>\n<li>Styles</li>\n<li>Preview</li>\n</ol>", 'mailpoet'),
+                  ],
+                ],
+              ],
+            ],
+          ],
+          [
             "type" => "container",
             "orientation" => "horizontal",
-            "styles" => array(
-              "block" => array(
-                "backgroundColor" => "#f8f8f8"
-              )
-            ),
-            "blocks" => array(
-              array(
+            "styles" => [
+              "block" => [
+                "backgroundColor" => "#f8f8f8",
+              ],
+            ],
+            "blocks" => [
+              [
                 "type" => "container",
                 "orientation" => "vertical",
-                "styles" => array(
-                  "block" => array(
-                    "backgroundColor" => "transparent"
-                  )
-                ),
-                "blocks" => array(
-                  array(
+                "styles" => [
+                  "block" => [
+                    "backgroundColor" => "transparent",
+                  ],
+                ],
+                "blocks" => [
+                  [
                     "type" => "divider",
-                    "styles" => array(
-                      "block" => array(
+                    "styles" => [
+                      "block" => [
                         "backgroundColor" => "transparent",
                         "padding" => "24.5px",
                         "borderStyle" => "solid",
                         "borderWidth" => "3px",
-                        "borderColor" => "#aaaaaa"
-                      )
-                    )
-                  ),
-                  array(
+                        "borderColor" => "#aaaaaa",
+                      ],
+                    ],
+                  ],
+                  [
                     "type" => "social",
                     "iconSet" => "grey",
-                    "icons" => array(
-                      array(
+                    "icons" => [
+                      [
                         "type" => "socialIcon",
                         "iconType" => "facebook",
                         "link" => "http://www.facebook.com",
                         "image" => $this->social_icon_url . "/02-grey/Facebook.png",
                         "height" => "32px",
                         "width" => "32px",
-                        "text" => "Facebook"
-                      ),
-                      array(
+                        "text" => "Facebook",
+                      ],
+                      [
                         "type" => "socialIcon",
                         "iconType" => "twitter",
                         "link" => "http://www.twitter.com",
                         "image" => $this->social_icon_url . "/02-grey/Twitter.png",
                         "height" => "32px",
                         "width" => "32px",
-                        "text" => "Twitter"
-                      )
-                    )
-                  ),
-                  array(
+                        "text" => "Twitter",
+                      ],
+                    ],
+                  ],
+                  [
                     "type" => "divider",
-                    "styles" => array(
-                      "block" => array(
+                    "styles" => [
+                      "block" => [
                         "backgroundColor" => "transparent",
                         "padding" => "7.5px",
                         "borderStyle" => "solid",
                         "borderWidth" => "3px",
-                        "borderColor" => "#aaaaaa"
-                      )
-                    )
-                  ),
-                  array(
+                        "borderColor" => "#aaaaaa",
+                      ],
+                    ],
+                  ],
+                  [
                     "type" => "footer",
-                    "text" => __("<p><a href=\"[link:subscription_unsubscribe_url]\">Unsubscribe</a> | <a href=\"[link:subscription_manage_url]\">Manage your subscription</a><br />Add your postal address here!</p>", 'mailpoet'),
-                    "styles" => array(
-                      "block" => array(
-                        "backgroundColor" => "transparent"
-                      ),
-                      "text" => array(
+                    "text" => '<p><a href="[link:subscription_unsubscribe_url]">'.WPFunctions::get()->__("Unsubscribe", 'mailpoet').'</a> | <a href="[link:subscription_manage_url]">'.WPFunctions::get()->__("Manage your subscription", 'mailpoet').'</a><br />'.WPFunctions::get()->__("Add your postal address here!", 'mailpoet').'</p>',
+                    "styles" => [
+                      "block" => [
+                        "backgroundColor" => "transparent",
+                      ],
+                      "text" => [
                         "fontColor" => "#222222",
                         "fontFamily" => "Arial",
                         "fontSize" => "12px",
-                        "textAlign" => "center"
-                      ),
-                      "link" => array(
+                        "textAlign" => "center",
+                      ],
+                      "link" => [
                         "fontColor" => "#6cb7d4",
-                        "textDecoration" => "none"
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      ),
-      "globalStyles" => array(
-        "text" => array(
+                        "textDecoration" => "none",
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+        ],
+      ],
+      "globalStyles" => [
+        "text" => [
           "fontColor" => "#000000",
           "fontFamily" => "Arial",
-          "fontSize" => "16px"
-        ),
-        "h1" => array(
+          "fontSize" => "16px",
+        ],
+        "h1" => [
           "fontColor" => "#111111",
           "fontFamily" => "Trebuchet MS",
-          "fontSize" => "30px"
-        ),
-        "h2" => array(
+          "fontSize" => "30px",
+        ],
+        "h2" => [
           "fontColor" => "#222222",
           "fontFamily" => "Trebuchet MS",
-          "fontSize" => "24px"
-        ),
-        "h3" => array(
+          "fontSize" => "24px",
+        ],
+        "h3" => [
           "fontColor" => "#333333",
           "fontFamily" => "Trebuchet MS",
-          "fontSize" => "22px"
-        ),
-        "link" => array(
+          "fontSize" => "22px",
+        ],
+        "link" => [
           "fontColor" => "#21759B",
-          "textDecoration" => "underline"
-        ),
-        "wrapper" => array(
-          "backgroundColor" => "#ffffff"
-        ),
-        "body" => array(
-          "backgroundColor" => "#eeeeee"
-        )
-      )
-    );
+          "textDecoration" => "underline",
+        ],
+        "wrapper" => [
+          "backgroundColor" => "#ffffff",
+        ],
+        "body" => [
+          "backgroundColor" => "#eeeeee",
+        ],
+      ],
+    ];
   }
 
   private function getThumbnail() {
-    return $this->external_template_image_url . '/screenshot.jpg';
+    return $this->external_template_image_url . '/thumbnail.20190411-1500.jpg';
   }
-
 }
-

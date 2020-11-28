@@ -1,19 +1,20 @@
 <?php
+
 namespace MailPoet\Newsletter\Editor;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Util\DOM as DOMUtil;
 use pQuery;
 use pQuery\DomNode;
-use MailPoet\Util\DOM as DOMUtil;
-
-if(!defined('ABSPATH')) exit;
 
 class StructureTransformer {
-
-  function transform($content, $image_full_width) {
+  public function transform($content, $imageFullWidth) {
     $root = pQuery::parseStr($content);
 
     $this->hoistImagesToRoot($root);
-    $structure = $this->transformTagsToBlocks($root, $image_full_width);
+    $structure = $this->transformTagsToBlocks($root, $imageFullWidth);
     $structure = $this->mergeNeighboringBlocks($structure);
     return $structure;
   }
@@ -23,11 +24,11 @@ class StructureTransformer {
    * elements and inserts tags as children of top ancestor
    */
   protected function hoistImagesToRoot(DomNode $root) {
-    foreach($root->query('img') as $item) {
-      $top_ancestor = DOMUtil::findTopAncestor($item);
-      $offset = $top_ancestor->index();
+    foreach ($root->query('img') as $item) {
+      $topAncestor = DOMUtil::findTopAncestor($item);
+      $offset = $topAncestor->index();
 
-      if($item->hasParent('a') || $item->hasParent('figure')) {
+      if ($item->hasParent('a') || $item->hasParent('figure')) {
         $item = $item->parent;
       }
 
@@ -39,32 +40,32 @@ class StructureTransformer {
    * Transforms HTML tags into their respective JSON objects,
    * turns other root children into text blocks
    */
-  private function transformTagsToBlocks(DomNode $root, $image_full_width) {
+  private function transformTagsToBlocks(DomNode $root, $imageFullWidth) {
     $children = $this->filterOutFiguresWithoutImages($root->children);
-    return array_map(function($item) use ($image_full_width) {
-      if($this->isImageElement($item)) {
+    return array_map(function($item) use ($imageFullWidth) {
+      if ($this->isImageElement($item)) {
         $image = $item->tag === 'img' ? $item : $item->query('img')[0];
         $width = $image->getAttribute('width');
         $height = $image->getAttribute('height');
-        return array(
+        return [
           'type' => 'image',
           'link' => $item->getAttribute('href') ?: '',
           'src' => $image->getAttribute('src'),
           'alt' => $image->getAttribute('alt'),
-          'fullWidth' => $image_full_width,
+          'fullWidth' => $imageFullWidth,
           'width' => $width === null ? 'auto' : $width,
           'height' => $height === null ? 'auto' : $height,
-          'styles' => array(
-            'block' => array(
+          'styles' => [
+            'block' => [
               'textAlign' => $this->getImageAlignment($image),
-            ),
-          ),
-        );
+            ],
+          ],
+        ];
       } else {
-        return array(
+        return [
           'type' => 'text',
-          'text' => $item->toString()
-        );
+          'text' => $item->toString(),
+        ];
       }
 
     }, $children);
@@ -72,7 +73,7 @@ class StructureTransformer {
 
   private function filterOutFiguresWithoutImages(array $items) {
     $items = array_filter($items, function (DomNode $item) {
-      if($item->tag === 'figure' && !$item->query('img')) {
+      if ($item->tag === 'figure' && $item->query('img')->count() === 0) {
         return false;
       }
       return true;
@@ -81,16 +82,16 @@ class StructureTransformer {
   }
 
   private function isImageElement(DomNode $item) {
-    return $item->tag === 'img' || (in_array($item->tag, ['a', 'figure'], true) && $item->query('img'));
+    return $item->tag === 'img' || (in_array($item->tag, ['a', 'figure'], true) && $item->query('img')->count() > 0);
   }
 
   private function getImageAlignment(DomNode $image) {
     $alignItem = $image->hasParent('figure') ? $image->parent : $image;
-    if($alignItem->hasClass('aligncenter')) {
+    if ($alignItem->hasClass('aligncenter')) {
       $align = 'center';
-    } elseif($alignItem->hasClass('alignleft')) {
+    } elseif ($alignItem->hasClass('alignleft')) {
       $align = 'left';
-    } elseif($alignItem->hasClass('alignright')) {
+    } elseif ($alignItem->hasClass('alignright')) {
       $align = 'right';
     } else {
       $align = 'left';
@@ -103,32 +104,31 @@ class StructureTransformer {
    * E.g. 2 adjacent text blocks may be combined into one.
    */
   private function mergeNeighboringBlocks(array $structure) {
-    $updated_structure = array();
-    $text_accumulator = '';
-    foreach($structure as $item) {
-      if($item['type'] === 'text') {
-        $text_accumulator .= $item['text'];
+    $updatedStructure = [];
+    $textAccumulator = '';
+    foreach ($structure as $item) {
+      if ($item['type'] === 'text') {
+        $textAccumulator .= $item['text'];
       }
-      if($item['type'] !== 'text') {
-        if(!empty($text_accumulator)) {
-          $updated_structure[] = array(
+      if ($item['type'] !== 'text') {
+        if (!empty($textAccumulator)) {
+          $updatedStructure[] = [
             'type' => 'text',
-            'text' => trim($text_accumulator),
-          );
-          $text_accumulator = '';
+            'text' => trim($textAccumulator),
+          ];
+          $textAccumulator = '';
         }
-        $updated_structure[] = $item;
+        $updatedStructure[] = $item;
       }
     }
 
-    if(!empty($text_accumulator)) {
-      $updated_structure[] = array(
+    if (!empty($textAccumulator)) {
+      $updatedStructure[] = [
         'type' => 'text',
-        'text' => trim($text_accumulator),
-      );
+        'text' => trim($textAccumulator),
+      ];
     }
 
-    return $updated_structure;
+    return $updatedStructure;
   }
-
 }

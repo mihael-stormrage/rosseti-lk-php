@@ -2,39 +2,38 @@
 
 namespace MailPoet\Subscribers;
 
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Config\Renderer;
+use MailPoet\Mailer\Mailer;
+use MailPoet\Mailer\MetaInfo;
 use MailPoet\Models\Segment;
-use MailPoet\Models\Setting;
 use MailPoet\Models\Subscriber;
+use MailPoet\Settings\SettingsController;
+use MailPoet\WP\Functions as WPFunctions;
 
 class NewSubscriberNotificationMailer {
 
-  const SENDER_EMAIL_PREFIX = 'wordpress@';
   const SETTINGS_KEY = 'subscriber_email_notification';
+
+  /** @var Mailer */
+  private $mailer;
 
   /** @var Renderer */
   private $renderer;
 
-  /** @var \MailPoet\Mailer\Mailer */
-  private $mailer;
+  /** @var SettingsController */
+  private $settings;
 
-  /**
-   * @param \MailPoet\Mailer\Mailer|null $mailer
-   * @param Renderer|null $renderer
-   */
-  function __construct($mailer = null, $renderer = null) {
-    if($renderer) {
-      $this->renderer = $renderer;
-    } else {
-      $caching = !WP_DEBUG;
-      $debugging = WP_DEBUG;
-      $this->renderer = new Renderer($caching, $debugging);
-    }
-    if($mailer) {
-      $this->mailer = $mailer;
-    } else {
-      $this->mailer = new \MailPoet\Mailer\Mailer(false, $this->constructSenderEmail());
-    }
+  /** @var MetaInfo */
+  private $mailerMetaInfo;
+
+  public function __construct(Mailer $mailer, Renderer $renderer, SettingsController $settings) {
+    $this->mailer = $mailer;
+    $this->renderer = $renderer;
+    $this->settings = $settings;
+    $this->mailerMetaInfo = new MetaInfo();
   }
 
   /**
@@ -43,47 +42,37 @@ class NewSubscriberNotificationMailer {
    *
    * @throws \Exception
    */
-  function send(Subscriber $subscriber, array $segments) {
-    $settings = Setting::getValue(NewSubscriberNotificationMailer::SETTINGS_KEY);
-    if($this->isDisabled($settings)) {
+  public function send(Subscriber $subscriber, array $segments) {
+    $settings = $this->settings->get(NewSubscriberNotificationMailer::SETTINGS_KEY);
+    if ($this->isDisabled($settings)) {
       return;
     }
     try {
-      $this->mailer->getSenderNameAndAddress($this->constructSenderEmail());
-      $this->mailer->send($this->constructNewsletter($subscriber, $segments), $settings['address']);
-    } catch(\Exception $e) {
-      if(WP_DEBUG) {
+      $extraParams = [
+        'meta' => $this->mailerMetaInfo->getNewSubscriberNotificationMetaInfo(),
+      ];
+      $this->mailer->send($this->constructNewsletter($subscriber, $segments), $settings['address'], $extraParams);
+    } catch (\Exception $e) {
+      if (WP_DEBUG) {
         throw $e;
       }
     }
   }
 
   public static function isDisabled($settings) {
-    if(!is_array($settings)) {
+    if (!is_array($settings)) {
       return true;
     }
-    if(!isset($settings['enabled'])) {
+    if (!isset($settings['enabled'])) {
       return true;
     }
-    if(!isset($settings['address'])) {
+    if (!isset($settings['address'])) {
       return true;
     }
-    if(empty(trim($settings['address']))) {
+    if (empty(trim($settings['address']))) {
       return true;
     }
     return !(bool)$settings['enabled'];
-  }
-
-  private function constructSenderEmail() {
-    $url_parts = parse_url(home_url());
-    $site_name = strtolower($url_parts['host']);
-    if(substr($site_name, 0, 4) === 'www.') {
-      $site_name = substr($site_name, 4);
-    }
-    return [
-      'address' => self::SENDER_EMAIL_PREFIX . $site_name,
-      'name' => self::SENDER_EMAIL_PREFIX . $site_name,
-    ];
   }
 
   /**
@@ -94,15 +83,15 @@ class NewSubscriberNotificationMailer {
    * @throws \Exception
    */
   private function constructNewsletter(Subscriber $subscriber, array $segments) {
-    $segment_names = $this->getSegmentNames($segments);
+    $segmentNames = $this->getSegmentNames($segments);
     $context = [
       'subscriber_email' => $subscriber->get('email'),
-      'segments_names' => $segment_names,
-      'link_settings' => get_site_url(null, '/wp-admin/admin.php?page=mailpoet-settings'),
-      'link_premium' => get_site_url(null, '/wp-admin/admin.php?page=mailpoet-premium'),
+      'segments_names' => $segmentNames,
+      'link_settings' => WPFunctions::get()->getSiteUrl(null, '/wp-admin/admin.php?page=mailpoet-settings'),
+      'link_premium' => WPFunctions::get()->getSiteUrl(null, '/wp-admin/admin.php?page=mailpoet-premium'),
     ];
     return [
-      'subject' => sprintf(__('New subscriber to %s', 'mailpoet'), $segment_names),
+      'subject' => sprintf(__('New subscriber to %s', 'mailpoet'), $segmentNames),
       'body' => [
         'html' => $this->renderer->render('emails/newSubscriberNotification.html', $context),
         'text' => $this->renderer->render('emails/newSubscriberNotification.txt', $context),
@@ -116,10 +105,9 @@ class NewSubscriberNotificationMailer {
    */
   private function getSegmentNames($segments) {
     $names = [];
-    foreach($segments as $segment) {
+    foreach ($segments as $segment) {
       $names[] = $segment->get('name');
     }
     return implode(', ', $names);
   }
-
 }

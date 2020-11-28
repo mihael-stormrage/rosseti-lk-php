@@ -1,12 +1,21 @@
 <?php
+
 namespace MailPoet\Mailer;
+
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
 
 class MailerError {
   const OPERATION_CONNECT = 'connect';
   const OPERATION_SEND = 'send';
+  const OPERATION_AUTHORIZATION = 'authorization';
 
   const LEVEL_HARD = 'hard';
   const LEVEL_SOFT = 'soft';
+
+  const MESSAGE_EMAIL_NOT_AUTHORIZED = 'The email address is not authorized';
 
   /** @var string */
   private $operation;
@@ -18,87 +27,80 @@ class MailerError {
   private $message;
 
   /** @var int|null */
-  private $retry_interval;
+  private $retryInterval;
 
   /** @var array */
-  private $subscribers_errors = [];
+  private $subscribersErrors = [];
 
   /**
    * @param string $operation
    * @param string $level
    * @param null|string $message
-   * @param int|null $retry_interval
-   * @param array $subscribers_errors
+   * @param int|null $retryInterval
+   * @param array $subscribersErrors
    */
-  function __construct($operation, $level, $message = null, $retry_interval = null, array $subscribers_errors = []) {
+  public function __construct($operation, $level, $message = null, $retryInterval = null, array $subscribersErrors = []) {
     $this->operation = $operation;
     $this->level = $level;
     $this->message = $message;
-    $this->retry_interval = $retry_interval;
-    $this->subscribers_errors = $subscribers_errors;
+    $this->retryInterval = $retryInterval;
+    $this->subscribersErrors = $subscribersErrors;
   }
 
   /**
    * @return string
    */
-  function getOperation() {
+  public function getOperation() {
     return $this->operation;
   }
 
   /**
    * @return string
    */
-  function getLevel() {
+  public function getLevel() {
     return $this->level;
   }
 
   /**
    * @return null|string
    */
-  function getMessage() {
+  public function getMessage() {
     return $this->message;
   }
 
   /**
    * @return int|null
    */
-  function getRetryInterval() {
-    return $this->retry_interval;
+  public function getRetryInterval() {
+    return $this->retryInterval;
   }
 
   /**
    * @return SubscriberError[]
    */
-  function getSubscriberErrors() {
-    return $this->subscribers_errors;
+  public function getSubscriberErrors() {
+    return $this->subscribersErrors;
   }
 
-  /**
-   * Temporary method until we implement UI for subscriber errors
-   */
-  function switchLevelToHard() {
-    $this->level = self::LEVEL_HARD;
-  }
-
-  function getMessageWithFailedSubscribers() {
+  public function getMessageWithFailedSubscribers() {
     $message = $this->message ?: '';
-    if(!$this->subscribers_errors) {
+    if (!$this->subscribersErrors) {
       return $message;
     }
 
     $message .= $this->message ? ' ' : '';
 
-    if(count($this->subscribers_errors) === 1) {
-      $message .=  __('Unprocessed subscriber:', 'mailpoet') . ' ';
+    if (count($this->subscribersErrors) === 1) {
+      $message .= WPFunctions::get()->__('Unprocessed subscriber:', 'mailpoet') . ' ';
     } else {
-      $message .=  __('Unprocessed subscribers:', 'mailpoet') . ' ';
+      $message .= WPFunctions::get()->__('Unprocessed subscribers:', 'mailpoet') . ' ';
     }
 
     $message .= implode(
       ', ',
-      array_map(function (SubscriberError $subscriber_error) {
-        return "($subscriber_error)";
-      }, $this->subscribers_errors)
+      array_map(function (SubscriberError $subscriberError) {
+        return "($subscriberError)";
+      }, $this->subscribersErrors)
     );
     return $message;
   }

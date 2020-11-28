@@ -1,47 +1,85 @@
 <?php
+
 namespace MailPoet\Form\Block;
 
-if(!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit;
 
-class Select extends Base {
 
-  static function render($block) {
+use MailPoet\Form\BlockStylesRenderer;
+use MailPoet\Form\BlockWrapperRenderer;
+use MailPoet\WP\Functions as WPFunctions;
+
+class Select {
+
+  /** @var BlockRendererHelper */
+  private $rendererHelper;
+
+  /** @var WPFunctions */
+  private $wp;
+
+  /** @var BlockWrapperRenderer */
+  private $wrapper;
+
+  /** @var BlockStylesRenderer */
+  private $blockStylesRenderer;
+
+  public function __construct(
+    BlockRendererHelper $rendererHelper,
+    BlockWrapperRenderer $wrapper,
+    BlockStylesRenderer $blockStylesRenderer,
+    WPFunctions $wp
+  ) {
+    $this->rendererHelper = $rendererHelper;
+    $this->wrapper = $wrapper;
+    $this->wp = $wp;
+    $this->blockStylesRenderer = $blockStylesRenderer;
+  }
+
+  public function render(array $block, array $formSettings): string {
     $html = '';
 
-    $field_name = 'data[' . static::getFieldName($block) . ']';
-    $field_validation = static::getInputValidation($block);
-    $automation_id = ($block['id'] == 'status') ? 'data-automation-id="form_status"' : '';
-    $html .= '<p class="mailpoet_paragraph">';
-    $html .= static::renderLabel($block);
-    $html .= '<select class="mailpoet_select" name="'.$field_name.'" ' . $automation_id . '>';
+    $fieldName = 'data[' . $this->rendererHelper->getFieldName($block) . ']';
+    $automationId = ($block['id'] == 'status') ? 'data-automation-id="form_status"' : '';
 
-    if(isset($block['params']['label_within']) && $block['params']['label_within']) {
-      $html .= '<option value="">'.static::getFieldLabel($block).'</option>';
+    $html .= $this->rendererHelper->renderLabel($block, $formSettings);
+    $html .= '<select
+      class="mailpoet_select"
+      name="' . $fieldName . '" '
+      . $automationId
+      . 'style="' . $this->blockStylesRenderer->renderForSelect([], $formSettings) . '"'
+      . '>';
+
+    if (isset($block['params']['label_within']) && $block['params']['label_within']) {
+      $label = $this->rendererHelper->getFieldLabel($block);
+      if (!empty($block['params']['required'])) {
+        $label .= ' *';
+      }
+      $html .= '<option value="" disabled selected hidden>' . $label . '</option>';
     } else {
-      if(empty($block['params']['required']) || !$block['params']['required']) {
+      if (empty($block['params']['required']) || !$block['params']['required']) {
         $html .= '<option value="">-</option>';
       }
     }
 
     $options = (!empty($block['params']['values'])
       ? $block['params']['values']
-      : array()
+      : []
     );
 
-    foreach($options as $option) {
-      if(!empty($option['is_hidden'])) {
+    foreach ($options as $option) {
+      if (!empty($option['is_hidden'])) {
         continue;
       }
 
-      $is_selected = (
+      $isSelected = (
         (isset($option['is_checked']) && $option['is_checked'])
         ||
-        (self::getFieldValue($block) === $option['value'])
+        ($this->rendererHelper->getFieldValue($block) === $option['value'])
       ) ? ' selected="selected"' : '';
 
-      $is_disabled = (!empty($option['is_disabled'])) ? ' disabled="disabled"' : '';
+      $isDisabled = (!empty($option['is_disabled'])) ? ' disabled="disabled"' : '';
 
-      if(is_array($option['value'])) {
+      if (is_array($option['value'])) {
         $value = key($option['value']);
         $label = reset($option['value']);
       } else {
@@ -49,14 +87,12 @@ class Select extends Base {
         $label = $option['value'];
       }
 
-      $html .= '<option value="'.$value.'"' . $is_selected . $is_disabled . '>';
-      $html .= esc_attr($label);
+      $html .= '<option value="' . $value . '"' . $isSelected . $isDisabled . '>';
+      $html .= $this->wp->escAttr($label);
       $html .= '</option>';
     }
     $html .= '</select>';
 
-    $html .= '</p>';
-
-    return $html;
+    return $this->wrapper->render($block, $html);
   }
 }

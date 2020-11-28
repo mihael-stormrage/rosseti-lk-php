@@ -1,21 +1,32 @@
 <?php
+
 namespace MailPoet\Mailer;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\Mailer\Methods\AmazonSES;
 use MailPoet\Mailer\Methods\ErrorMappers\AmazonSESMapper;
 use MailPoet\Mailer\Methods\ErrorMappers\MailPoetMapper;
 use MailPoet\Mailer\Methods\ErrorMappers\PHPMailMapper;
 use MailPoet\Mailer\Methods\ErrorMappers\SendGridMapper;
 use MailPoet\Mailer\Methods\ErrorMappers\SMTPMapper;
-use MailPoet\Models\Setting;
-
-if(!defined('ABSPATH')) exit;
+use MailPoet\Mailer\Methods\MailPoet;
+use MailPoet\Mailer\Methods\PHPMail;
+use MailPoet\Mailer\Methods\SendGrid;
+use MailPoet\Mailer\Methods\SMTP;
+use MailPoet\Services\AuthorizedEmailsController;
+use MailPoet\Settings\SettingsController;
 
 class Mailer {
-  public $mailer_config;
+  public $mailerConfig;
   public $sender;
-  public $reply_to;
-  public $return_path;
-  public $mailer_instance;
+  public $replyTo;
+  public $returnPath;
+  public $mailerInstance;
+  /** @var SettingsController */
+  private $settings;
   const MAILER_CONFIG_SETTING_NAME = 'mta';
   const SENDING_LIMIT_INTERVAL_MULTIPLIER = 60;
   const METHOD_MAILPOET = 'MailPoet';
@@ -24,167 +35,173 @@ class Mailer {
   const METHOD_PHPMAIL = 'PHPMail';
   const METHOD_SMTP = 'SMTP';
 
-  function __construct($mailer = false, $sender = false, $reply_to = false, $return_path = false) {
-    $this->mailer_config = self::getMailerConfig($mailer);
+  public function __construct(SettingsController $settings = null) {
+    if (!$settings) {
+      $settings = SettingsController::getInstance();
+    }
+    $this->settings = $settings;
+  }
+
+  public function init($mailer = false, $sender = false, $replyTo = false, $returnPath = false) {
+    $this->mailerConfig = $this->getMailerConfig($mailer);
     $this->sender = $this->getSenderNameAndAddress($sender);
-    $this->reply_to = $this->getReplyToNameAndAddress($reply_to);
-    $this->return_path = $this->getReturnPathAddress($return_path);
-    $this->mailer_instance = $this->buildMailer();
+    $this->replyTo = $this->getReplyToNameAndAddress($replyTo);
+    $this->returnPath = $this->getReturnPathAddress($returnPath);
+    $this->mailerInstance = $this->buildMailer();
   }
 
-  function send($newsletter, $subscriber, $extra_params = array()) {
+  public function send($newsletter, $subscriber, $extraParams = []) {
+    if (!$this->mailerInstance) {
+      $this->init();
+    }
     $subscriber = $this->formatSubscriberNameAndEmailAddress($subscriber);
-    return $this->mailer_instance->send($newsletter, $subscriber, $extra_params);
+    return $this->mailerInstance->send($newsletter, $subscriber, $extraParams);
   }
 
-  function buildMailer() {
-    switch($this->mailer_config['method']) {
+  private function buildMailer() {
+    switch ($this->mailerConfig['method']) {
       case self::METHOD_AMAZONSES:
-        $mailer_instance = new $this->mailer_config['class'](
-          $this->mailer_config['region'],
-          $this->mailer_config['access_key'],
-          $this->mailer_config['secret_key'],
+        $mailerInstance = new AmazonSES(
+          $this->mailerConfig['region'],
+          $this->mailerConfig['access_key'],
+          $this->mailerConfig['secret_key'],
           $this->sender,
-          $this->reply_to,
-          $this->return_path,
+          $this->replyTo,
+          $this->returnPath,
           new AmazonSESMapper()
         );
         break;
       case self::METHOD_MAILPOET:
-        $mailer_instance = new $this->mailer_config['class'](
-          $this->mailer_config['mailpoet_api_key'],
+        $mailerInstance = new MailPoet(
+          $this->mailerConfig['mailpoet_api_key'],
           $this->sender,
-          $this->reply_to,
-          new MailPoetMapper()
+          $this->replyTo,
+          new MailPoetMapper(),
+          ContainerWrapper::getInstance()->get(AuthorizedEmailsController::class)
         );
         break;
       case self::METHOD_SENDGRID:
-        $mailer_instance = new $this->mailer_config['class'](
-          $this->mailer_config['api_key'],
+        $mailerInstance = new SendGrid(
+          $this->mailerConfig['api_key'],
           $this->sender,
-          $this->reply_to,
+          $this->replyTo,
           new SendGridMapper()
         );
         break;
       case self::METHOD_PHPMAIL:
-        $mailer_instance = new $this->mailer_config['class'](
+        $mailerInstance = new PHPMail(
           $this->sender,
-          $this->reply_to,
-          $this->return_path,
+          $this->replyTo,
+          $this->returnPath,
           new PHPMailMapper()
         );
         break;
       case self::METHOD_SMTP:
-        $mailer_instance = new $this->mailer_config['class'](
-          $this->mailer_config['host'],
-          $this->mailer_config['port'],
-          $this->mailer_config['authentication'],
-          $this->mailer_config['login'],
-          $this->mailer_config['password'],
-          $this->mailer_config['encryption'],
+        $mailerInstance = new SMTP(
+          $this->mailerConfig['host'],
+          $this->mailerConfig['port'],
+          $this->mailerConfig['authentication'],
+          $this->mailerConfig['login'],
+          $this->mailerConfig['password'],
+          $this->mailerConfig['encryption'],
           $this->sender,
-          $this->reply_to,
-          $this->return_path,
+          $this->replyTo,
+          $this->returnPath,
           new SMTPMapper()
         );
         break;
       default:
         throw new \Exception(__('Mailing method does not exist.', 'mailpoet'));
     }
-    return $mailer_instance;
+    return $mailerInstance;
   }
 
-  static function getMailerConfig($mailer = false) {
-    if(!$mailer) {
-      $mailer = Setting::getValue(self::MAILER_CONFIG_SETTING_NAME);
-      if(!$mailer || !isset($mailer['method'])) throw new \Exception(__('Mailer is not configured.', 'mailpoet'));
+  private function getMailerConfig($mailer = false) {
+    if (!$mailer) {
+      $mailer = $this->settings->get(self::MAILER_CONFIG_SETTING_NAME);
+      if (!$mailer || !isset($mailer['method'])) throw new \Exception(__('Mailer is not configured.', 'mailpoet'));
     }
-    if(empty($mailer['frequency'])) {
-      $default_settings = Setting::getDefaults();
-      $mailer['frequency'] = $default_settings['mta']['frequency'];
-    }
-    // add additional variables to the mailer object
-    $mailer['class'] = 'MailPoet\\Mailer\\Methods\\' . $mailer['method'];
-    $mailer['frequency_interval'] =
-      (int)$mailer['frequency']['interval'] * self::SENDING_LIMIT_INTERVAL_MULTIPLIER;
-    $mailer['frequency_limit'] = (int)$mailer['frequency']['emails'];
     return $mailer;
   }
 
-  function getSenderNameAndAddress($sender = false) {
-    if(empty($sender)) {
-      $sender = Setting::getValue('sender', array());
-      if(empty($sender['address'])) throw new \Exception(__('Sender name and email are not configured.', 'mailpoet'));
+  private function getSenderNameAndAddress($sender = false) {
+    if (empty($sender)) {
+      $sender = $this->settings->get('sender', []);
+      if (empty($sender['address'])) throw new \Exception(__('Sender name and email are not configured.', 'mailpoet'));
     }
-    $from_name = $this->encodeAddressNamePart($sender['name']);
-    return array(
-      'from_name' => $from_name,
+    $fromName = $this->encodeAddressNamePart($sender['name']);
+    return [
+      'from_name' => $fromName,
       'from_email' => $sender['address'],
-      'from_name_email' => sprintf('%s <%s>', $from_name, $sender['address'])
-    );
+      'from_name_email' => sprintf('%s <%s>', $fromName, $sender['address']),
+    ];
   }
 
-  function getReplyToNameAndAddress($reply_to = array()) {
-    if(!$reply_to) {
-      $reply_to = Setting::getValue('reply_to');
-      $reply_to['name'] = (!empty($reply_to['name'])) ?
-        $reply_to['name'] :
+  public function getReplyToNameAndAddress($replyTo = []) {
+    if (!$replyTo) {
+      $replyTo = $this->settings->get('reply_to');
+      $replyTo['name'] = (!empty($replyTo['name'])) ?
+        $replyTo['name'] :
         $this->sender['from_name'];
-      $reply_to['address'] = (!empty($reply_to['address'])) ?
-        $reply_to['address'] :
+      $replyTo['address'] = (!empty($replyTo['address'])) ?
+        $replyTo['address'] :
         $this->sender['from_email'];
     }
-    if(empty($reply_to['address'])) {
-      $reply_to['address'] = $this->sender['from_email'];
+    if (empty($replyTo['address'])) {
+      $replyTo['address'] = $this->sender['from_email'];
     }
-    $reply_to_name = $this->encodeAddressNamePart($reply_to['name']);
-    return array(
-      'reply_to_name' => $reply_to_name,
-      'reply_to_email' => $reply_to['address'],
-      'reply_to_name_email' => sprintf('%s <%s>', $reply_to_name, $reply_to['address'])
-    );
+    $replyToName = $this->encodeAddressNamePart($replyTo['name']);
+    return [
+      'reply_to_name' => $replyToName,
+      'reply_to_email' => $replyTo['address'],
+      'reply_to_name_email' => sprintf('%s <%s>', $replyToName, $replyTo['address']),
+    ];
   }
 
-  function getReturnPathAddress($return_path) {
-    return ($return_path) ?
-      $return_path :
-      Setting::getValue('bounce.address');
+  public function getReturnPathAddress($returnPath) {
+    return ($returnPath) ?
+      $returnPath :
+      $this->settings->get('bounce.address');
   }
 
-  function formatSubscriberNameAndEmailAddress($subscriber) {
+  /**
+   * @param  \MailPoet\Models\Subscriber|array|string $subscriber
+   */
+  public function formatSubscriberNameAndEmailAddress($subscriber) {
     $subscriber = (is_object($subscriber)) ? $subscriber->asArray() : $subscriber;
-    if(!is_array($subscriber)) return $subscriber;
-    if(isset($subscriber['address'])) $subscriber['email'] = $subscriber['address'];
-    $first_name = (isset($subscriber['first_name'])) ? $subscriber['first_name'] : '';
-    $last_name = (isset($subscriber['last_name'])) ? $subscriber['last_name'] : '';
-    if(!$first_name && !$last_name) return $subscriber['email'];
-    $full_name = sprintf('%s %s', $first_name, $last_name);
-    $full_name = trim(preg_replace('!\s\s+!', ' ', $full_name));
-    $full_name = $this->encodeAddressNamePart($full_name);
+    if (!is_array($subscriber)) return $subscriber;
+    if (isset($subscriber['address'])) $subscriber['email'] = $subscriber['address'];
+    $firstName = (isset($subscriber['first_name'])) ? $subscriber['first_name'] : '';
+    $lastName = (isset($subscriber['last_name'])) ? $subscriber['last_name'] : '';
+    $fullName = (isset($subscriber['full_name'])) ? $subscriber['full_name'] : null;
+    if (!$firstName && !$lastName && !$fullName) return $subscriber['email'];
+    $fullName = is_null($fullName) ? sprintf('%s %s', $firstName, $lastName) : $fullName;
+    $fullName = trim(preg_replace('!\s\s+!', ' ', $fullName));
+    $fullName = $this->encodeAddressNamePart($fullName);
     $subscriber = sprintf(
       '%s <%s>',
-      $full_name,
+      $fullName,
       $subscriber['email']
     );
     return $subscriber;
   }
 
-  function encodeAddressNamePart($name) {
-    if(mb_detect_encoding($name) === 'ASCII') return $name;
+  public function encodeAddressNamePart($name) {
+    if (mb_detect_encoding($name) === 'ASCII') return $name;
     // encode non-ASCII string as per RFC 2047 (https://www.ietf.org/rfc/rfc2047.txt)
     return sprintf('=?utf-8?B?%s?=', base64_encode($name));
   }
 
-  static function formatMailerErrorResult(MailerError $error) {
+  public static function formatMailerErrorResult(MailerError $error) {
     return [
       'response' => false,
       'error' => $error,
     ];
   }
 
-  static function formatMailerSendSuccessResult() {
+  public static function formatMailerSendSuccessResult() {
     return [
-      'response' => true
+      'response' => true,
     ];
   }
 }

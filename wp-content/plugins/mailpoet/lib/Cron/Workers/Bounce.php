@@ -1,19 +1,20 @@
 <?php
+
 namespace MailPoet\Cron\Workers;
 
-use MailPoet\Cron\CronHelper;
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Mailer\Mailer;
 use MailPoet\Models\ScheduledTask;
 use MailPoet\Models\ScheduledTaskSubscriber;
-use MailPoet\Tasks\Bounce as BounceTask;
-use MailPoet\Tasks\Subscribers as TaskSubscribers;
-use MailPoet\Tasks\Subscribers\BatchIterator;
 use MailPoet\Models\Subscriber;
 use MailPoet\Services\Bridge;
 use MailPoet\Services\Bridge\API;
-use function MailPoet\Util\array_column;
-
-if(!defined('ABSPATH')) exit;
+use MailPoet\Settings\SettingsController;
+use MailPoet\Tasks\Bounce as BounceTask;
+use MailPoet\Tasks\Subscribers as TaskSubscribers;
+use MailPoet\Tasks\Subscribers\BatchIterator;
 
 class Bounce extends SimpleWorker {
   const TASK_TYPE = 'bounce';
@@ -25,67 +26,73 @@ class Bounce extends SimpleWorker {
 
   public $api;
 
-  function init() {
-    if(!$this->api) {
-      $mailer_config = Mailer::getMailerConfig();
-      $this->api = new API($mailer_config['mailpoet_api_key']);
+  /** @var SettingsController */
+  private $settings;
+
+  public function __construct(SettingsController $settings) {
+    $this->settings = $settings;
+    parent::__construct();
+  }
+
+  public function init() {
+    if (!$this->api) {
+      $this->api = new API($this->settings->get(Mailer::MAILER_CONFIG_SETTING_NAME)['mailpoet_api_key']);
     }
   }
 
-  function checkProcessingRequirements() {
+  public function checkProcessingRequirements() {
     return Bridge::isMPSendingServiceEnabled();
   }
 
-  function prepareTask(ScheduledTask $task) {
+  public function prepareTaskStrategy(ScheduledTask $task, $timer) {
     BounceTask::prepareSubscribers($task);
 
-    if(!ScheduledTaskSubscriber::getUnprocessedCount($task->id)) {
-      $task->delete();
+    if (!ScheduledTaskSubscriber::getUnprocessedCount($task->id)) {
+      ScheduledTaskSubscriber::where('task_id', $task->id)->deleteMany();
       return false;
     }
-
-    return parent::prepareTask($task);
+    return true;
   }
 
-  function processTask(ScheduledTask $task) {
-    $subscriber_batches = new BatchIterator($task->id, self::BATCH_SIZE);
+  public function processTaskStrategy(ScheduledTask $task, $timer) {
+    $subscriberBatches = new BatchIterator($task->id, self::BATCH_SIZE);
 
-    if(count($subscriber_batches) === 0) {
-      $task->delete();
-      return false;
+    if (count($subscriberBatches) === 0) {
+      ScheduledTaskSubscriber::where('task_id', $task->id)->deleteMany();
+      return true; // mark completed
     }
 
-    $task_subscribers = new TaskSubscribers($task);
+    $taskSubscribers = new TaskSubscribers($task);
 
-    foreach($subscriber_batches as $subscribers_to_process_ids) {
+    foreach ($subscriberBatches as $subscribersToProcessIds) {
       // abort if execution limit is reached
-      CronHelper::enforceExecutionLimit($this->timer);
+      $this->cronHelper->enforceExecutionLimit($timer);
 
-      $subscriber_emails = Subscriber::select('email')
-        ->whereIn('id', $subscribers_to_process_ids)
+      $subscriberEmails = Subscriber::select('email')
+        ->whereIn('id', $subscribersToProcessIds)
         ->whereNull('deleted_at')
         ->findArray();
-      $subscriber_emails = array_column($subscriber_emails, 'email');
+      $subscriberEmails = array_column($subscriberEmails, 'email');
 
-      $this->processEmails($subscriber_emails);
+      $this->processEmails($subscriberEmails);
 
-      $task_subscribers->updateProcessedSubscribers($subscribers_to_process_ids);
+      $taskSubscribers->updateProcessedSubscribers($subscribersToProcessIds);
     }
 
     return true;
   }
 
-  function processEmails(array $subscriber_emails) {
-    $checked_emails = $this->api->checkBounces($subscriber_emails);
-    $this->processApiResponse((array)$checked_emails);
+  public function processEmails(array $subscriberEmails) {
+    $checkedEmails = $this->api->checkBounces($subscriberEmails);
+    $this->processApiResponse((array)$checkedEmails);
   }
 
-  function processApiResponse(array $checked_emails) {
-    foreach($checked_emails as $email) {
-      if(!isset($email['address'], $email['bounce'])) {
+  public function processApiResponse(array $checkedEmails) {
+    foreach ($checkedEmails as $email) {
+      if (!isset($email['address'], $email['bounce'])) {
         continue;
       }
-      if($email['bounce'] === self::BOUNCED_HARD) {
+      if ($email['bounce'] === self::BOUNCED_HARD) {
         $subscriber = Subscriber::findOne($email['address']);
         $subscriber->status = Subscriber::STATUS_BOUNCED;
         $subscriber->save();

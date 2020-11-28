@@ -1,48 +1,71 @@
 <?php
+
 namespace MailPoet\Newsletter\Shortcodes\Categories;
 
-use MailPoet\Models\Subscriber as SubscriberModel;
-use MailPoet\Models\SubscriberCustomField;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
 
-class Subscriber {
-  static function process(
-    $shortcode_details,
-    $newsletter,
-    $subscriber
+use MailPoet\Entities\NewsletterEntity;
+use MailPoet\Entities\SendingQueueEntity;
+use MailPoet\Entities\SubscriberCustomFieldEntity;
+use MailPoet\Entities\SubscriberEntity;
+use MailPoet\Subscribers\SubscriberCustomFieldRepository;
+use MailPoet\Subscribers\SubscribersRepository;
+use MailPoet\WP\Functions as WPFunctions;
+
+class Subscriber implements CategoryInterface {
+
+  /** @var SubscribersRepository */
+  private $subscribersRepository;
+
+  /** @var SubscriberCustomFieldRepository */
+  private $subscriberCustomFieldRepository;
+
+  public function __construct(
+    SubscribersRepository $subscribersRepository,
+    SubscriberCustomFieldRepository $subscriberCustomFieldRepository
   ) {
-    if($subscriber !== false && !is_object($subscriber)) return $shortcode_details['shortcode'];
-    $default_value = ($shortcode_details['action_argument'] === 'default') ?
-      $shortcode_details['action_argument_value'] :
+    $this->subscribersRepository = $subscribersRepository;
+    $this->subscriberCustomFieldRepository = $subscriberCustomFieldRepository;
+  }
+
+  public function process(
+    array $shortcodeDetails,
+    NewsletterEntity $newsletter = null,
+    SubscriberEntity $subscriber = null,
+    SendingQueueEntity $queue = null,
+    string $content = '',
+    bool $wpUserPreview = false
+  ): ?string {
+    $defaultValue = ($shortcodeDetails['action_argument'] === 'default') ?
+      $shortcodeDetails['action_argument_value'] :
       '';
-    switch($shortcode_details['action']) {
+    switch ($shortcodeDetails['action']) {
       case 'firstname':
-        return (!empty($subscriber->first_name)) ? $subscriber->first_name : $default_value;
+        return (($subscriber instanceof SubscriberEntity) && !empty($subscriber->getFirstName())) ? $subscriber->getFirstName() : $defaultValue;
       case 'lastname':
-        return (!empty($subscriber->last_name)) ? $subscriber->last_name : $default_value;
+        return (($subscriber instanceof SubscriberEntity) && !empty($subscriber->getLastName())) ? $subscriber->getLastName() : $defaultValue;
       case 'email':
-        return ($subscriber) ? $subscriber->email : false;
+        return ($subscriber instanceof SubscriberEntity) ? $subscriber->getEmail() : $defaultValue;
       case 'displayname':
-        if($subscriber && $subscriber->wp_user_id) {
-          $wp_user = get_userdata($subscriber->wp_user_id);
-          return $wp_user->user_login;
+        if (($subscriber instanceof SubscriberEntity) && $subscriber->getWpUserId()) {
+          $wpUser = WPFunctions::get()->getUserdata($subscriber->getWpUserId());
+          return $wpUser->user_login; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
         }
-        return $default_value;
+        return $defaultValue;
       case 'count':
-        return SubscriberModel::filter('subscribed')
-          ->count();
+        return (string)$this->subscribersRepository->getTotalSubscribers();
       default:
-        if(preg_match('/cf_(\d+)/', $shortcode_details['action'], $custom_field) &&
-          !empty($subscriber->id)
+        if (preg_match('/cf_(\d+)/', $shortcodeDetails['action'], $customField) &&
+          !empty($subscriber->getId())
         ) {
-          $custom_field = SubscriberCustomField
-            ::where('subscriber_id', $subscriber->id)
-            ->where('custom_field_id', $custom_field[1])
-            ->findOne();
-          return ($custom_field) ? $custom_field->value : false;
+          $customField = $this->subscriberCustomFieldRepository->findOneBy([
+            'subscriber' => $subscriber,
+            'customField' => $customField[1],
+          ]);
+          return ($customField instanceof SubscriberCustomFieldEntity) ? $customField->getValue() : null;
         }
-        return false;
+        return null;
     }
   }
 }

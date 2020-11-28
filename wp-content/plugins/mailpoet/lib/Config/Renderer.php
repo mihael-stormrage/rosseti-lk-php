@@ -2,38 +2,43 @@
 
 namespace MailPoet\Config;
 
-use MailPoet\Twig;
-use Twig_Environment as TwigEnv;
-use Twig_Lexer as TwigLexer;
-use Twig_Loader_Filesystem as TwigFileSystem;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\Twig;
+use MailPoet\Util\CdnAssetUrl;
+use MailPoet\WP\Functions as WPFunctions;
+use MailPoetVendor\Twig\Environment as TwigEnv;
+use MailPoetVendor\Twig\Extension\DebugExtension;
+use MailPoetVendor\Twig\Lexer as TwigLexer;
+use MailPoetVendor\Twig\Loader\FilesystemLoader as TwigFileSystem;
 
 class Renderer {
-  protected $cache_path;
-  protected $caching_enabled;
-  protected $debugging_enabled;
+  protected $cachePath;
+  protected $cachingEnabled;
+  protected $debuggingEnabled;
   protected $renderer;
-  public $assets_manifest_js;
-  public $assets_manifest_css;
+  public $assetsManifestJs;
+  public $assetsManifestCss;
 
-  function __construct($caching_enabled = false, $debugging_enabled = false) {
-    $this->caching_enabled = $caching_enabled;
-    $this->debugging_enabled = $debugging_enabled;
-    $this->cache_path = Env::$cache_path;
+  public function __construct($cachingEnabled = false, $debuggingEnabled = false) {
+    $this->cachingEnabled = $cachingEnabled;
+    $this->debuggingEnabled = $debuggingEnabled;
+    $this->cachePath = Env::$cachePath;
 
-    $file_system = new TwigFileSystem(Env::$views_path);
+    $fileSystem = new TwigFileSystem(Env::$viewsPath);
     $this->renderer = new TwigEnv(
-      $file_system,
-      array(
+      $fileSystem,
+      [
         'cache' => $this->detectCache(),
-        'debug' => $this->debugging_enabled,
-        'auto_reload' => true
-      )
+        'debug' => $this->debuggingEnabled,
+        'auto_reload' => true,
+      ]
     );
 
-    $this->assets_manifest_js = $this->getAssetManifest(Env::$assets_path . '/js/manifest.json');
-    $this->assets_manifest_css = $this->getAssetManifest(Env::$assets_path . '/css/manifest.json');
+    $this->assetsManifestJs = $this->getAssetManifest(Env::$assetsPath . '/dist/js/manifest.json');
+    $this->assetsManifestCss = $this->getAssetManifest(Env::$assetsPath . '/dist/css/manifest.json');
     $this->setupDebug();
     $this->setupTranslations();
     $this->setupFunctions();
@@ -41,97 +46,95 @@ class Renderer {
     $this->setupHandlebars();
     $this->setupHelpscout();
     $this->setupAnalytics();
-    $this->setupPolls();
     $this->setupGlobalVariables();
     $this->setupSyntax();
   }
 
-  function setupTranslations() {
-    $this->renderer->addExtension(new Twig\I18n(Env::$plugin_name));
+  public function setupTranslations() {
+    $this->renderer->addExtension(new Twig\I18n(Env::$pluginName));
   }
 
-  function setupFunctions() {
+  public function setupFunctions() {
     $this->renderer->addExtension(new Twig\Functions());
   }
 
-  function setupFilters() {
+  public function setupFilters() {
     $this->renderer->addExtension(new Twig\Filters());
   }
 
-  function setupHandlebars() {
+  public function setupHandlebars() {
     $this->renderer->addExtension(new Twig\Handlebars());
   }
 
-  function setupHelpscout() {
+  public function setupHelpscout() {
     $this->renderer->addExtension(new Twig\Helpscout());
   }
 
-  function setupAnalytics() {
+  public function setupAnalytics() {
     $this->renderer->addExtension(new Twig\Analytics());
   }
 
-  function setupPolls() {
-    $this->renderer->addExtension(new Twig\Polls());
-  }
-
-  function setupGlobalVariables() {
-    $this->renderer->addExtension(new Twig\Assets(array(
+  public function setupGlobalVariables() {
+    $this->renderer->addExtension(new Twig\Assets([
       'version' => Env::$version,
-      'base_url' => Env::$base_url,
-      'assets_url' => Env::$assets_url,
-      'assets_manifest_js' => $this->assets_manifest_js,
-      'assets_manifest_css' => $this->assets_manifest_css
-    )));
+      'assets_url' => Env::$assetsUrl,
+      'assets_manifest_js' => $this->assetsManifestJs,
+      'assets_manifest_css' => $this->assetsManifestCss,
+    ], ContainerWrapper::getInstance()->get(CdnAssetUrl::class)));
   }
 
-  function setupSyntax() {
-    $lexer = new TwigLexer($this->renderer, array(
-      'tag_comment' => array('<#', '#>'),
-      'tag_block' => array('<%', '%>'),
-      'tag_variable' => array('<%=', '%>'),
-      'interpolation' => array('%{', '}')
-    ));
+  public function setupSyntax() {
+    $lexer = new TwigLexer($this->renderer, [
+      'tag_comment' => ['<#', '#>'],
+      'tag_block' => ['<%', '%>'],
+      'tag_variable' => ['<%=', '%>'],
+      'interpolation' => ['%{', '}'],
+    ]);
     $this->renderer->setLexer($lexer);
   }
 
-  function detectCache() {
-    return $this->caching_enabled ? $this->cache_path : false;
+  public function detectCache() {
+    return $this->cachingEnabled ? $this->cachePath : false;
   }
 
-  function setupDebug() {
-    if($this->debugging_enabled) {
-      $this->renderer->addExtension(new \Twig_Extension_Debug());
+  public function setupDebug() {
+    if ($this->debuggingEnabled) {
+      $this->renderer->addExtension(new DebugExtension());
     }
   }
 
-  function render($template, $context = array()) {
+  public function render($template, $context = []) {
     try {
       return $this->renderer->render($template, $context);
-    } catch(\RuntimeException $e) {
+    } catch (\RuntimeException $e) {
       throw new \Exception(sprintf(
-        __('Failed to render template "%s". Please ensure the template cache folder "%s" exists and has write permissions. Terminated with error: "%s"'),
+        WPFunctions::get()->__('Failed to render template "%s". Please ensure the template cache folder "%s" exists and has write permissions. Terminated with error: "%s"'),
         $template,
-        $this->cache_path,
+        $this->cachePath,
         $e->getMessage()
       ));
     }
   }
 
-  function getAssetManifest($manifest_file) {
-    return (is_readable($manifest_file)) ?
-      json_decode(file_get_contents($manifest_file), true) :
-      false;
+  public function getAssetManifest($manifestFile) {
+    if (is_readable($manifestFile)) {
+      $contents = file_get_contents($manifestFile);
+      if (is_string($contents)) {
+        return json_decode($contents, true);
+      }
+    }
+    return false;
   }
 
-  function getJsAsset($asset) {
-    return (!empty($this->assets_manifest_js[$asset])) ?
-      $this->assets_manifest_js[$asset] :
+  public function getJsAsset($asset) {
+    return (!empty($this->assetsManifestJs[$asset])) ?
+      $this->assetsManifestJs[$asset] :
       $asset;
   }
 
-  function getCssAsset($asset) {
-    return (!empty($this->assets_manifest_css[$asset])) ?
-      $this->assets_manifest_css[$asset] :
+  public function getCssAsset($asset) {
+    return (!empty($this->assetsManifestCss[$asset])) ?
+      $this->assetsManifestCss[$asset] :
       $asset;
   }
 }

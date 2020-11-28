@@ -2,125 +2,134 @@
 
 namespace MailPoet\Newsletter\Shortcodes;
 
-use MailPoet\Models\CustomField;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\CustomFields\CustomFieldsRepository;
+use MailPoet\Models\NewsletterLink;
 
 class ShortcodesHelper {
+  /** @var CustomFieldsRepository */
+  private $customFieldsRepository;
 
-  static function getShortcodes() {
-    $shortcodes = array(
-      __('Subscriber', 'mailpoet') => array(
-        array(
+  public function __construct(CustomFieldsRepository $customFieldsRepository) {
+    $this->customFieldsRepository = $customFieldsRepository;
+  }
+
+  public function getShortcodes(): array {
+    $shortcodes = [
+      __('Subscriber', 'mailpoet') => [
+        [
           'text' => __('First Name', 'mailpoet'),
           'shortcode' => '[subscriber:firstname | default:reader]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Last Name', 'mailpoet'),
           'shortcode' => '[subscriber:lastname | default:reader]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Email Address', 'mailpoet'),
           'shortcode' => '[subscriber:email]',
-        ),
-        array(
+        ],
+        [
           'text' => __('WordPress User Display Name', 'mailpoet'),
           'shortcode' => '[subscriber:displayname | default:member]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Total Number of Subscribers', 'mailpoet'),
           'shortcode' => '[subscriber:count]',
-        )
-      ),
-      __('Newsletter', 'mailpoet') => array(
-        array(
+        ],
+      ],
+      __('Newsletter', 'mailpoet') => [
+        [
           'text' => __('Newsletter Subject', 'mailpoet'),
           'shortcode' => '[newsletter:subject]',
-        )
-      ),
-      __('Post Notifications', 'mailpoet') => array(
-        array(
+        ],
+      ],
+      __('Post Notifications', 'mailpoet') => [
+        [
           'text' => __('Total Number of Posts or Pages', 'mailpoet'),
           'shortcode' => '[newsletter:total]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Most Recent Post Title', 'mailpoet'),
           'shortcode' => '[newsletter:post_title]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Issue Number', 'mailpoet'),
           'shortcode' => '[newsletter:number]',
-        )
-      ),
-      __('Date', 'mailpoet') => array(
-        array(
+        ],
+      ],
+      __('Date', 'mailpoet') => [
+        [
           'text' => __('Current day of the month number', 'mailpoet'),
           'shortcode' => '[date:d]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Current day of the month in ordinal form, i.e. 2nd, 3rd, 4th, etc.', 'mailpoet'),
           'shortcode' => '[date:dordinal]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Full name of current day', 'mailpoet'),
           'shortcode' => '[date:dtext]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Current month number', 'mailpoet'),
           'shortcode' => '[date:m]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Full name of current month', 'mailpoet'),
           'shortcode' => '[date:mtext]',
-        ),
-        array(
+        ],
+        [
           'text' => __('Year', 'mailpoet'),
           'shortcode' => '[date:y]',
-        )
-      ),
-      __('Links', 'mailpoet') => array(
-        array(
+        ],
+      ],
+      __('Links', 'mailpoet') => [
+        [
           'text' => __('Unsubscribe link', 'mailpoet'),
           'shortcode' => sprintf(
             '<a target="_blank" href="%s">%s</a>',
-            '[link:subscription_unsubscribe_url]',
+            NewsletterLink::UNSUBSCRIBE_LINK_SHORT_CODE,
             __('Unsubscribe', 'mailpoet')
-          )
-        ),
-        array(
+          ),
+        ],
+        [
           'text' => __('Edit subscription page link', 'mailpoet'),
           'shortcode' => sprintf(
             '<a target="_blank" href="%s">%s</a>',
             '[link:subscription_manage_url]',
             __('Manage subscription', 'mailpoet')
-          )
-        ),
-        array(
+          ),
+        ],
+        [
           'text' => __('View in browser link', 'mailpoet'),
           'shortcode' => sprintf(
             '<a target="_blank" href="%s">%s</a>',
             '[link:newsletter_view_in_browser_url]',
             __('View in your browser', 'mailpoet')
-          )
-        )
-      )
-    );
-    $custom_fields = self::getCustomFields();
-    if($custom_fields) {
+          ),
+        ],
+      ],
+    ];
+    $customFields = $this->getCustomFields();
+    if (count($customFields) > 0) {
       $shortcodes[__('Subscriber', 'mailpoet')] = array_merge(
         $shortcodes[__('Subscriber', 'mailpoet')],
-        $custom_fields
+        $customFields
       );
     }
     return $shortcodes;
   }
 
-  static function getCustomFields() {
-    $custom_fields = CustomField::findMany();
-    if(!$custom_fields) return false;
-    return array_map(function($custom_field) {
-      return array(
-        'text' => $custom_field->name,
-        'shortcode' => '[subscriber:cf_' . $custom_field->id . ']'
-      );
-    }, $custom_fields);
+  public function getCustomFields(): array {
+    $customFields = $this->customFieldsRepository->findAll();
+    return array_map(function($customField) {
+      return [
+        'text' => $customField->getName(),
+        'shortcode' => '[subscriber:cf_' . $customField->getId() . ']',
+      ];
+    }, $customFields);
   }
 }

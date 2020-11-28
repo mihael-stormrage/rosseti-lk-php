@@ -2,78 +2,87 @@
 
 namespace MailPoet\API\JSON\v1;
 
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\API\JSON\Endpoint as APIEndpoint;
 use MailPoet\API\JSON\Error as APIError;
+use MailPoet\API\JSON\ResponseBuilders\NewsletterTemplatesResponseBuilder;
 use MailPoet\Config\AccessControl;
-use MailPoet\Models\NewsletterTemplate;
-
-if(!defined('ABSPATH')) exit;
+use MailPoet\NewsletterTemplates\NewsletterTemplatesRepository;
+use MailPoet\WP\Functions as WPFunctions;
 
 class NewsletterTemplates extends APIEndpoint {
-  public $permissions = array(
-    'global' => AccessControl::PERMISSION_MANAGE_EMAILS
-  );
+  public $permissions = [
+    'global' => AccessControl::PERMISSION_MANAGE_EMAILS,
+  ];
 
-  function get($data = array()) {
-    $id = (isset($data['id']) ? (int)$data['id'] : false);
-    $template = NewsletterTemplate::findOne($id);
-    if($template === false) {
-      return $this->errorResponse(array(
-        APIError::NOT_FOUND => __('This template does not exist.', 'mailpoet')
-      ));
-    } else {
-      return $this->successResponse(
-        $template->asArray()
-      );
+  protected static $getMethods = [
+    'getAll',
+  ];
+
+  /** @var NewsletterTemplatesRepository */
+  private $newsletterTemplatesRepository;
+
+  /** @var NewsletterTemplatesResponseBuilder */
+  private $newsletterTemplatesResponseBuilder;
+
+  public function __construct(
+    NewsletterTemplatesRepository $newsletterTemplatesRepository,
+    NewsletterTemplatesResponseBuilder $newsletterTemplatesResponseBuilder
+  ) {
+    $this->newsletterTemplatesRepository = $newsletterTemplatesRepository;
+    $this->newsletterTemplatesResponseBuilder = $newsletterTemplatesResponseBuilder;
+  }
+
+  public function get($data = []) {
+    $template = isset($data['id'])
+      ? $this->newsletterTemplatesRepository->findOneById((int)$data['id'])
+      : null;
+
+    if (!$template) {
+      return $this->errorResponse([
+        APIError::NOT_FOUND => WPFunctions::get()->__('This template does not exist.', 'mailpoet'),
+      ]);
     }
+
+    $data = $this->newsletterTemplatesResponseBuilder->build($template);
+    return $this->successResponse($data);
   }
 
-  function getAll() {
-    $collection = NewsletterTemplate
-      ::selectExpr('id, categories, thumbnail, name, description, readonly')
-      ->orderByAsc('readonly')
-      ->orderByDesc('created_at')
-      ->orderByDesc('id')
-      ->findMany();
-    $templates = array_map(function($item) {
-      return $item->asArray();
-    }, $collection);
-
-    return $this->successResponse($templates);
+  public function getAll() {
+    $templates = $this->newsletterTemplatesRepository->findAllForListing();
+    $data = $this->newsletterTemplatesResponseBuilder->buildForListing($templates);
+    return $this->successResponse($data);
   }
 
-  function save($data = array()) {
-    if(!empty($data['newsletter_id'])) {
-      $template = NewsletterTemplate::whereEqual('newsletter_id', $data['newsletter_id'])->findOne();
-      if(!empty($template)) {
-        $data['id'] = $template->id;
+  public function save($data = []) {
+    ignore_user_abort(true);
+    try {
+      $template = $this->newsletterTemplatesRepository->createOrUpdate($data);
+      if (!empty($data['categories']) && $data['categories'] === NewsletterTemplatesRepository::RECENTLY_SENT_CATEGORIES) {
+        $this->newsletterTemplatesRepository->cleanRecentlySent();
       }
-    }
-
-    $template = NewsletterTemplate::createOrUpdate($data);
-    $errors = $template->getErrors();
-
-    NewsletterTemplate::cleanRecentlySent($data);
-
-    if(!empty($errors)) {
-      return $this->errorResponse($errors);
-    } else {
-      return $this->successResponse(
-        NewsletterTemplate::findOne($template->id)->asArray()
-      );
+      $data = $this->newsletterTemplatesResponseBuilder->build($template);
+      return $this->successResponse($data);
+    } catch (\Throwable $e) {
+      return $this->errorResponse();
     }
   }
 
-  function delete($data = array()) {
-    $id = (isset($data['id']) ? (int)$data['id'] : false);
-    $template = NewsletterTemplate::findOne($id);
-    if($template === false) {
-      return $this->errorResponse(array(
-        APIError::NOT_FOUND => __('This template does not exist.', 'mailpoet')
-      ));
-    } else {
-      $template->delete();
-      return $this->successResponse(null, array('count' => 1));
+  public function delete($data = []) {
+    $template = isset($data['id'])
+      ? $this->newsletterTemplatesRepository->findOneById((int)$data['id'])
+      : null;
+
+    if (!$template) {
+      return $this->errorResponse([
+        APIError::NOT_FOUND => WPFunctions::get()->__('This template does not exist.', 'mailpoet'),
+      ]);
     }
+
+    $this->newsletterTemplatesRepository->remove($template);
+    $this->newsletterTemplatesRepository->flush();
+    return $this->successResponse(null, ['count' => 1]);
   }
 }

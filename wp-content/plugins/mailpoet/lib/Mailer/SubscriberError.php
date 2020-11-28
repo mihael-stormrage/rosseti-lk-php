@@ -1,5 +1,9 @@
 <?php
+
 namespace MailPoet\Mailer;
+
+if (!defined('ABSPATH')) exit;
+
 
 class SubscriberError {
 
@@ -13,7 +17,7 @@ class SubscriberError {
    * @param string $email
    * @param string $message|null
    */
-  function __construct($email, $message = null) {
+  public function __construct($email, $message = null) {
     $this->email = $email;
     $this->message = $message;
   }
@@ -21,18 +25,18 @@ class SubscriberError {
   /**
    * @return string
    */
-  function getEmail() {
+  public function getEmail() {
     return $this->email;
   }
 
   /**
    * @return null|string
    */
-  function getMessage() {
+  public function getMessage() {
     return $this->message;
   }
 
-  function __toString() {
+  public function __toString() {
     return $this->message ? $this->email . ': ' . $this->message : $this->email;
   }
 }

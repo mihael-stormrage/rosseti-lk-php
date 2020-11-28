@@ -2,26 +2,20 @@
 
 namespace MailPoet\Util\pQuery;
 
+if (!defined('ABSPATH')) exit;
+
+
 // extend pQuery class to use UTF-8 encoding when getting elements' inner/outer text
+// phpcs:ignore Squiz.Classes.ValidClassName
 class pQuery extends \pQuery {
   public static function parseStr($html) {
     $parser = new Html5Parser($html);
+
+    if (!$parser->root instanceof \pQuery\DomNode) {
+      // this condition shouldn't happen it is here only for PHPStan
+      throw new \Exception('Renderer is not configured correctly');
+    }
+
     return $parser->root;
-  }
-}
-
-class Html5Parser extends \pQuery\HtmlParser {
-  var $root = 'MailPoet\Util\pQuery\DomNode';
-}
-
-class DomNode extends \pQuery\DomNode {
-  var $childClass = 'MailPoet\Util\pQuery\DomNode';
-
-  function getInnerText() {
-    return html_entity_decode($this->toString(true, true, 1), ENT_NOQUOTES, 'UTF-8');
-  }
-
-  function getOuterText() {
-    return html_entity_decode($this->toString(), ENT_NOQUOTES, 'UTF-8');
   }
 }

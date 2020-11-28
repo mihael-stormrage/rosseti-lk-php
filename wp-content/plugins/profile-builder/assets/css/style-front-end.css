@@ -7,7 +7,7 @@
 2.0 - Forms
 3.0 - Alignments
 4.0 - Errors & Notices
-5.0 - User Listing 
+5.0 - User Listing
 6.0 - Media Queries
 --------------------------------------------------------------*/
 
@@ -24,7 +24,7 @@
 /*--------------------------------------------------------------
 2.0 Forms
 --------------------------------------------------------------*/
-.wppb-user-forms input:not([type="button"]):not([type="reset"]):not([type="submit"]),
+.wppb-user-forms input:not([type="button"]):not([type="reset"]):not([type="submit"]):not([type="file"]),
 .wppb-user-forms select,
 .wppb-user-forms textarea{
 	font-size: 100%; /* Corrects font size not being inherited in all browsers */
@@ -126,6 +126,10 @@
 
 .wppb-user-forms .extra_field_heading {
     margin-bottom: 0;
+}
+
+.wppb-gdpr-delete-button .wppb-delete-account {
+    width: 110px;
 }
 
 /*--------------------------------------------------------------
@@ -361,7 +365,6 @@ label[for=blog-privacy]{
 4.0 Errors & Notices
 --------------------------------------------------------------*/
 
-#wppb_general_top_error_message,
 .wppb-error,
 .wppb-warning {
     padding: 6px 9px;
@@ -373,19 +376,20 @@ label[for=blog-privacy]{
     border: 1px solid #C00;
 }
 
-#wppb_general_top_error_message,
 .wppb-error,
 .wppb-warning{
     color:#222222 !important;
 }
 
-#wppb_general_top_error_message a,
 .wppb-error a,
 .wppb-warning a{
     color:#007acc !important;
 }
 
-#wppb_general_top_error_message a:hover,
+.admin-bar #wppb_form_general_message{
+    padding-top:32px;
+}
+
 .wppb-error a:hover,
 .wppb-warning a:hover{
     color:#007acc !important;
@@ -401,7 +405,6 @@ label[for=blog-privacy]{
     margin-left:5px;
 }
 
-#wppb_form_success_message,
 .wppb-success {
     padding: 6px 9px;
     margin: 0 auto 25px;
@@ -665,6 +668,68 @@ ul.wppb-faceted-list .hide-this{
     max-width:300px;
 }
 
+li.wppb-facet-search{
+    position: relative;
+}
+
+.wppb-facet-search-wrap label {
+    display: inline-block;
+    position: relative;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.wppb-facet-search{
+    width: 75% !important;
+    margin-right: 5px !important;
+}
+
+.wppb-facet-search .screen-reader-text{
+    display: none;
+}
+
+.wppb-facet-search,
+.wppb-search-submit {
+    box-sizing: border-box;
+    display: inline-block !important;
+    vertical-align: middle;
+}
+
+.wppb-search-submit{
+    display: inline-block;
+    width: 20%;
+    height: 100%;
+    background: #4F5963;
+    position: absolute;
+    right: 0;
+
+    cursor: pointer;
+    border: 1px solid #444D57;
+    border-radius: 3px;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.wppb-search-submit:hover {
+    background: #fff;
+    color: #4F5963;
+}
+
+.wppb-search-submit::before{
+    content: "\26B2";
+    display: inline-block;
+    color: #fff;
+    font-size: 120%;
+
+    -webkit-transform: rotate(-45deg);
+    -moz-transform: rotate(-45deg);
+    -o-transform: rotate(-45deg);
+    transform: rotate(-45deg);
+}
+
+.wppb-search-submit:hover::before{
+    color: #4F5963;
+}
 
 @media screen and ( max-width: 720px ) {
 
@@ -725,7 +790,8 @@ ul.wppb-faceted-list .hide-this{
 	}
 
 	.wppb-form-field input,
-	.wppb-form-field select,
+    .wppb-form-field input[type="text"], .wppb-form-field input[type="number"], .wppb-form-field input[type="email"], .wppb-form-field input[type="url"], .wppb-form-field input[type="password"], .wppb-form-field input[type="search"],
+    .wppb-form-field select,
 	.wppb-form-field textarea,
 	.wppb-checkboxes,
 	.wppb-radios,
@@ -740,18 +806,18 @@ ul.wppb-faceted-list .hide-this{
 		margin-left:0;
 	}
 
-	.wppb-checkboxes li label, 
+	.wppb-checkboxes li label,
 	.wppb-radios li label{
 		display:inline;
 	}
-	
+
 	.wppb-form-field .wppb-avatar-nofile,
 	.wppb-form-field .wppb-avatar-file,
 	.wppb-form-field .wppb-upload-nofile,
 	.wppb-form-field .wppb-upload-file{
 		margin-left:0;
 	}
-	
+
 }
 
 /*--------------------------------------------------------------
@@ -821,3 +887,9 @@ ul.wppb-faceted-list .hide-this{
 .wppb-private-website.wppb-private-website-hide-menus .main-navigation{
     display:none;
 }
+
+
+/* Map markers info */
+.marker-content-info {position: absolute; top: -400px; left: -400px; display: none;}
+.wppb-map-container .marker-content {min-width: 320px; max-width: 100%;}
+.wppb-map-container .marker-content .marker-info-avatar_or_gravatar {float: left; margin-right: 10px;}

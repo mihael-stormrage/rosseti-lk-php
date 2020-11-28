@@ -2,56 +2,60 @@
 
 namespace MailPoet\Config\PopulatorData\Templates;
 
+if (!defined('ABSPATH')) exit;
+
+use MailPoet\WP\Functions as WPFunctions;
+
 class TakeAHike {
 
   private $template_image_url;
   private $social_icon_url;
 
-  function __construct($assets_url) {
+  public function __construct($assets_url) {
      $this->template_image_url = 'https://ps.w.org/mailpoet/assets/newsletter-templates/take_a_hike';
-    $this->social_icon_url = $assets_url . '/img/newsletter_editor/social-icons';
+     $this->social_icon_url = $assets_url . '/img/newsletter_editor/social-icons';
   }
 
-  function get() {
-    return array(
-      'name' => __("Take a Hike", 'mailpoet'),
-      'categories' => json_encode(array('standard', 'all')),
+  public function get() {
+    return [
+      'name' => WPFunctions::get()->__("Take a Hike", 'mailpoet'),
+      'categories' => json_encode(['standard', 'all']),
       'readonly' => 1,
       'thumbnail' => $this->getThumbnail(),
       'body' => json_encode($this->getBody()),
-    );
+    ];
   }
 
   private function getBody() {
-    return array(
-      'content' => array(
+    return [
+      'content' => [
         'type' => 'container',
         'orientation' => 'vertical',
-        'styles' => array(
-          'block' => array(
+        'styles' => [
+          'block' => [
             'backgroundColor' => 'transparent',
-          ),
-        ),
-        'blocks' => array(
-          0 => array(
+          ],
+        ],
+        'blocks' => [
+          0 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/header.jpg',
@@ -59,87 +63,87 @@ class TakeAHike {
                     'fullWidth' => true,
                     'width' => '1320px',
                     'height' => '483px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'text',
                     'text' => '<p>Hi&nbsp;[subscriber:firstname | default:explorer]</p>
                       <p></p>
                       <p>Aliquam feugiat nisl eget eleifend congue. Nullam neque tellus, elementum vel elit dictum, tempus sagittis nunc. Phasellus quis commodo odio. Vestibulum vitae mi vel quam rhoncus egestas eget vitae eros.&nbsp;</p>',
-                  ),
-                  3 => array(
+                  ],
+                  3 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  4 => array(
+                      ],
+                    ],
+                  ],
+                  4 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#843c15',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                  5 => array(
+                      ],
+                    ],
+                  ],
+                  5 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          1 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'text',
                     'text' => '<h1><strong>How to plan your hiking route</strong></h1>
                       <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Aliquam dictum urna ac lacus dapibus rhoncus.</p>',
-                  ),
-                  1 => array(
+                  ],
+                  1 => [
                     'type' => 'button',
                     'text' => 'Read More',
                     'url' => 'https://www.google.co.uk',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#64a1af',
                         'borderColor' => '#0074a2',
                         'borderWidth' => '0px',
@@ -152,21 +156,21 @@ class TakeAHike {
                         'fontSize' => '18px',
                         'fontWeight' => 'bold',
                         'textAlign' => 'left',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/map.jpg',
@@ -174,84 +178,84 @@ class TakeAHike {
                     'fullWidth' => false,
                     'width' => '330px',
                     'height' => '227px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          2 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          2 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#843c15',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          3 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          3 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/boots.jpg',
@@ -259,34 +263,34 @@ class TakeAHike {
                     'fullWidth' => false,
                     'width' => '600px',
                     'height' => '400px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'text',
                     'text' => '<h2><strong>Tried &amp; tested: Our favourite walking boots</strong></h2>
                         <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.&nbsp;</p>',
-                  ),
-                  1 => array(
+                  ],
+                  1 => [
                     'type' => 'button',
                     'text' => 'See Reviews',
                     'url' => '',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#64a1af',
                         'borderColor' => '#0074a2',
                         'borderWidth' => '0px',
@@ -299,85 +303,85 @@ class TakeAHike {
                         'fontSize' => '18px',
                         'fontWeight' => 'bold',
                         'textAlign' => 'left',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          4 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          4 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#843c15',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  3 => array(
+                      ],
+                    ],
+                  ],
+                  3 => [
                     'type' => 'text',
                     'text' => '<h3 style="text-align: center;"><strong>Hikers Gallery</strong></h3>',
-                  ),
-                ),
-              ),
-            ),
-          ),
-          5 => array(
+                  ],
+                ],
+              ],
+            ],
+          ],
+          5 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/gallery3.jpg',
@@ -385,24 +389,24 @@ class TakeAHike {
                     'fullWidth' => true,
                     'width' => '1000px',
                     'height' => '750px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/gallery1-300x225.jpg',
@@ -410,24 +414,24 @@ class TakeAHike {
                     'fullWidth' => true,
                     'width' => '300px',
                     'height' => '225px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              2 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+              2 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/gallery2-1.jpg',
@@ -435,53 +439,53 @@ class TakeAHike {
                     'fullWidth' => true,
                     'width' => '1000px',
                     'height' => '750px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          6 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          6 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'text',
                     'text' => '<p style="text-align: center;">Edit this to insert text</p>',
-                  ),
-                  2 => array(
+                  ],
+                  2 => [
                     'type' => 'button',
                     'text' => 'View More Photos',
                     'url' => '',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#64a1af',
                         'borderColor' => '#0074a2',
                         'borderWidth' => '0px',
@@ -494,36 +498,36 @@ class TakeAHike {
                         'fontSize' => '18px',
                         'fontWeight' => 'bold',
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  3 => array(
+                      ],
+                    ],
+                  ],
+                  3 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#843c15',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                  4 => array(
+                      ],
+                    ],
+                  ],
+                  4 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  5 => array(
+                      ],
+                    ],
+                  ],
+                  5 => [
                     'type' => 'text',
                     'text' => '<h3 style="text-align: center;"><strong>Hiking goes social...</strong></h3>',
-                  ),
-                  6 => array(
+                  ],
+                  6 => [
                     'type' => 'social',
                     'iconSet' => 'circles',
-                    'icons' => array(
-                      0 => array(
+                    'icons' => [
+                      0 => [
                         'type' => 'socialIcon',
                         'iconType' => 'facebook',
                         'link' => 'http://www.facebook.com',
@@ -531,8 +535,8 @@ class TakeAHike {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Facebook',
-                      ),
-                      1 => array(
+                      ],
+                      1 => [
                         'type' => 'socialIcon',
                         'iconType' => 'twitter',
                         'link' => 'http://www.twitter.com',
@@ -540,8 +544,8 @@ class TakeAHike {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Twitter',
-                      ),
-                      2 => array(
+                      ],
+                      2 => [
                         'type' => 'socialIcon',
                         'iconType' => 'instagram',
                         'link' => 'http://instagram.com',
@@ -549,8 +553,8 @@ class TakeAHike {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Instagram',
-                      ),
-                      3 => array(
+                      ],
+                      3 => [
                         'type' => 'socialIcon',
                         'iconType' => 'google-plus',
                         'link' => 'http://plus.google.com',
@@ -558,8 +562,8 @@ class TakeAHike {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Google Plus',
-                      ),
-                      4 => array(
+                      ],
+                      4 => [
                         'type' => 'socialIcon',
                         'iconType' => 'youtube',
                         'link' => 'http://www.youtube.com',
@@ -567,203 +571,203 @@ class TakeAHike {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Youtube',
-                      ),
-                    ),
-                  ),
-                  7 => array(
+                      ],
+                    ],
+                  ],
+                  7 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  8 => array(
+                      ],
+                    ],
+                  ],
+                  8 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#843c15',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          7 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          7 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#64a1af',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          8 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          8 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#64a1af',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'footer',
-                    'text' => '<p><a href="[link:subscription_unsubscribe_url]">Unsubscribe</a> | <a href="[link:subscription_manage_url]">Manage subscription</a></p>',
-                    'styles' => array(
-                      'block' => array(
+                    'text' => '<p><a href="[link:subscription_unsubscribe_url]">'.WPFunctions::get()->__("Unsubscribe", 'mailpoet').'</a> | <a href="[link:subscription_manage_url]">'.WPFunctions::get()->__("Manage your subscription", 'mailpoet').'</a></p>',
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
-                      ),
-                      'text' => array(
+                      ],
+                      'text' => [
                         'fontColor' => '#ffffff',
                         'fontFamily' => 'Arial',
                         'fontSize' => '13px',
                         'textAlign' => 'left',
-                      ),
-                      'link' => array(
+                      ],
+                      'link' => [
                         'fontColor' => '#ffffff',
                         'textDecoration' => 'underline',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'footer',
-                    'text' => '<p>Add your postal address here!</p>',
-                    'styles' => array(
-                      'block' => array(
+                    'text' => '<p>'.WPFunctions::get()->__("Add your postal address here!", 'mailpoet').'</p>',
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
-                      ),
-                      'text' => array(
+                      ],
+                      'text' => [
                         'fontColor' => '#ffffff',
                         'fontFamily' => 'Arial',
                         'fontSize' => '13px',
                         'textAlign' => 'right',
-                      ),
-                      'link' => array(
+                      ],
+                      'link' => [
                         'fontColor' => '#ffffff',
                         'textDecoration' => 'underline',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          9 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          9 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#64a1af',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      'globalStyles' => array(
-        'text' => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+        ],
+      ],
+      'globalStyles' => [
+        'text' => [
           'fontColor' => '#4f230c',
           'fontFamily' => 'Arial',
           'fontSize' => '16px',
-        ),
-        'h1' => array(
+        ],
+        'h1' => [
           'fontColor' => '#423c39',
           'fontFamily' => 'Courier New',
           'fontSize' => '24px',
-        ),
-        'h2' => array(
+        ],
+        'h2' => [
           'fontColor' => '#265f6d',
           'fontFamily' => 'Courier New',
           'fontSize' => '24px',
-        ),
-        'h3' => array(
+        ],
+        'h3' => [
           'fontColor' => '#423c39',
           'fontFamily' => 'Courier New',
           'fontSize' => '20px',
-        ),
-        'link' => array(
+        ],
+        'link' => [
           'fontColor' => '#843c15',
           'textDecoration' => 'underline',
-        ),
-        'wrapper' => array(
+        ],
+        'wrapper' => [
           'backgroundColor' => '#ffffff',
-        ),
-        'body' => array(
+        ],
+        'body' => [
           'backgroundColor' => '#843c15',
-        ),
-      ),
-    );
+        ],
+      ],
+    ];
   }
 
   private function getThumbnail() {
-    return $this->template_image_url . '/take-a-hike.jpg';
+    return $this->template_image_url . '/thumbnail.20190411-1500.jpg';
   }
 
 }

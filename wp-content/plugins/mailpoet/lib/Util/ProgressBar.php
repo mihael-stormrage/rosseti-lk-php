@@ -2,11 +2,12 @@
 
 namespace MailPoet\Util;
 
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Config\Env;
 
-if(!defined('ABSPATH')) exit;
-
-if(!class_exists('ProgressBar', false)) {
+if (!class_exists('ProgressBar', false)) {
 
   /**
    * The Progress Bar class
@@ -14,8 +15,8 @@ if(!class_exists('ProgressBar', false)) {
    */
   class ProgressBar {
 
-    private $total_count = 0;
-    private $current_count = 0;
+    private $totalCount = 0;
+    private $currentCount = 0;
     private $filename;
     public $url;
 
@@ -23,22 +24,22 @@ if(!class_exists('ProgressBar', false)) {
      * Initialize the class and set its properties.
      *
      */
-    public function __construct($progress_bar_id) {
-      $filename = $progress_bar_id . '-progress.json';
-      $this->filename = Env::$temp_path . '/' . $filename;
-      $this->url = Env::$temp_url . '/' . $filename;
+    public function __construct($progressBarId) {
+      $filename = $progressBarId . '-progress.json';
+      $this->filename = Env::$tempPath . '/' . $filename;
+      $this->url = Env::$tempUrl . '/' . $filename;
       $counters = $this->readProgress();
-      if(isset($counters->total)) {
-        $this->total_count = $counters->total;
+      if (isset($counters->total)) {
+        $this->totalCount = $counters->total;
       }
-      if(isset($counters->current)) {
-        $this->current_count = $counters->current;
+      if (isset($counters->current)) {
+        $this->currentCount = $counters->current;
       }
     }
 
     /**
      * Get the progress file URL
-     * 
+     *
      * @return string Progress file URL
      */
     public function getUrl() {
@@ -47,60 +48,61 @@ if(!class_exists('ProgressBar', false)) {
 
     /**
      * Read the progress counters
-     * 
+     *
      * @return array|false Array of counters
      */
     private function readProgress() {
-      if(file_exists($this->filename)) {
-        $json_content = file_get_contents($this->filename);
-        return json_decode($json_content);
-      } else {
+      if (!file_exists($this->filename)) {
         return false;
       }
+      $jsonContent = file_get_contents($this->filename);
+      if (is_string($jsonContent)) {
+        return json_decode($jsonContent);
+      }
+      return false;
     }
 
     /**
      * Set the total count
-     * 
+     *
      * @param int $count Count
      */
     public function setTotalCount($count) {
-      if(($count != $this->total_count) || ($count == 0)) {
-        $this->total_count = $count;
-        $this->current_count = 0;
+      if (($count != $this->totalCount) || ($count == 0)) {
+        $this->totalCount = $count;
+        $this->currentCount = 0;
         $this->saveProgress();
       }
     }
 
     /**
      * Increment the current count
-     * 
+     *
      * @param int $count Count
      */
     public function incrementCurrentCount($count) {
-      $this->current_count += $count;
+      $this->currentCount += $count;
       $this->saveProgress();
     }
 
     /**
      * Save the progress counters
-     * 
+     *
      */
     private function saveProgress() {
-      file_put_contents($this->filename, json_encode(array(
-        'total' => $this->total_count,
-        'current' => $this->current_count,
-      )));
+      file_put_contents($this->filename, json_encode([
+        'total' => $this->totalCount,
+        'current' => $this->currentCount,
+      ]));
     }
 
     /**
      * Delete the progress file
-     * 
+     *
      */
     public function deleteProgressFile() {
       unlink($this->filename);
     }
-
   }
 
 }

@@ -2,86 +2,182 @@
 
 namespace MailPoet\Config;
 
-use MailPoet\Models\Setting;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Form\DisplayFormInWPContent;
+use MailPoet\Mailer\WordPress\WordpressMailerReplacer;
+use MailPoet\Newsletter\Scheduler\PostNotificationScheduler;
+use MailPoet\Segments\WooCommerce as WooCommerceSegment;
+use MailPoet\Segments\WP;
+use MailPoet\Settings\SettingsController;
+use MailPoet\Statistics\Track\WooCommercePurchases;
+use MailPoet\Subscription\Comment;
 use MailPoet\Subscription\Form;
+use MailPoet\Subscription\Manage;
+use MailPoet\Subscription\Registration;
+use MailPoet\WooCommerce\Settings as WooCommerceSettings;
+use MailPoet\WooCommerce\Subscription as WooCommerceSubscription;
+use MailPoet\WP\Functions as WPFunctions;
 
 class Hooks {
 
   /** @var Form */
-  private $subscription_form;
+  private $subscriptionForm;
 
-  function __construct(Form $subscription_form) {
-    $this->subscription_form = $subscription_form;
+  /** @var Comment */
+  private $subscriptionComment;
+
+  /** @var Manage */
+  private $subscriptionManage;
+
+  /** @var Registration */
+  private $subscriptionRegistration;
+
+  /** @var SettingsController */
+  private $settings;
+
+  /** @var WPFunctions */
+  private $wp;
+
+  /** @var WooCommerceSubscription */
+  private $woocommerceSubscription;
+
+  /** @var WooCommerceSegment */
+  private $woocommerceSegment;
+
+  /** @var WooCommerceSettings */
+  private $woocommerceSettings;
+
+  /** @var WooCommercePurchases */
+  private $woocommercePurchases;
+
+  /** @var PostNotificationScheduler */
+  private $postNotificationScheduler;
+
+  /** @var WordpressMailerReplacer */
+  private $wordpressMailerReplacer;
+
+  /** @var DisplayFormInWPContent */
+  private $displayFormInWPContent;
+
+  /** @var WP */
+  private $wpSegment;
+
+  public function __construct(
+    Form $subscriptionForm,
+    Comment $subscriptionComment,
+    Manage $subscriptionManage,
+    Registration $subscriptionRegistration,
+    SettingsController $settings,
+    WPFunctions $wp,
+    WooCommerceSubscription $woocommerceSubscription,
+    WooCommerceSegment $woocommerceSegment,
+    WooCommerceSettings $woocommerceSettings,
+    WooCommercePurchases $woocommercePurchases,
+    PostNotificationScheduler $postNotificationScheduler,
+    WordpressMailerReplacer $wordpressMailerReplacer,
+    DisplayFormInWPContent $displayFormInWPContent,
+    WP $wpSegment
+  ) {
+    $this->subscriptionForm = $subscriptionForm;
+    $this->subscriptionComment = $subscriptionComment;
+    $this->subscriptionManage = $subscriptionManage;
+    $this->subscriptionRegistration = $subscriptionRegistration;
+    $this->settings = $settings;
+    $this->wp = $wp;
+    $this->woocommerceSubscription = $woocommerceSubscription;
+    $this->woocommerceSegment = $woocommerceSegment;
+    $this->woocommerceSettings = $woocommerceSettings;
+    $this->woocommercePurchases = $woocommercePurchases;
+    $this->postNotificationScheduler = $postNotificationScheduler;
+    $this->wordpressMailerReplacer = $wordpressMailerReplacer;
+    $this->displayFormInWPContent = $displayFormInWPContent;
+    $this->wpSegment = $wpSegment;
   }
 
-  function init() {
+  public function init() {
     $this->setupWPUsers();
+    $this->setupWooCommerceUsers();
+    $this->setupWooCommercePurchases();
     $this->setupImageSize();
     $this->setupListing();
     $this->setupSubscriptionEvents();
+    $this->setupWooCommerceSubscriptionEvents();
     $this->setupPostNotifications();
+    $this->setupWooCommerceSettings();
+    $this->setupFooter();
   }
 
-  function setupSubscriptionEvents() {
-    $subscribe = Setting::getValue('subscribe', array());
+  public function initEarlyHooks() {
+    $this->setupMailer();
+  }
+
+  public function setupSubscriptionEvents() {
+
+    $subscribe = $this->settings->get('subscribe', []);
     // Subscribe in comments
-    if(
+    if (
       isset($subscribe['on_comment']['enabled'])
       &&
       (bool)$subscribe['on_comment']['enabled']
     ) {
-      if(is_user_logged_in()) {
-        add_action(
+      if ($this->wp->isUserLoggedIn()) {
+        $this->wp->addAction(
           'comment_form_field_comment',
-          '\MailPoet\Subscription\Comment::extendLoggedInForm'
+          [$this->subscriptionComment, 'extendLoggedInForm']
         );
       } else {
-        add_action(
+        $this->wp->addAction(
           'comment_form_after_fields',
-          '\MailPoet\Subscription\Comment::extendLoggedOutForm'
+          [$this->subscriptionComment, 'extendLoggedOutForm']
         );
       }
 
-      add_action(
+      $this->wp->addAction(
         'comment_post',
-        '\MailPoet\Subscription\Comment::onSubmit',
+        [$this->subscriptionComment, 'onSubmit'],
         60,
         2
       );
 
-      add_action(
+      $this->wp->addAction(
         'wp_set_comment_status',
-        '\MailPoet\Subscription\Comment::onStatusUpdate',
+        [$this->subscriptionComment, 'onStatusUpdate'],
         60,
         2
       );
     }
 
     // Subscribe in registration form
-    if(
+    if (
       isset($subscribe['on_register']['enabled'])
       &&
       (bool)$subscribe['on_register']['enabled']
     ) {
-      if(is_multisite()) {
-        add_action(
+      if (is_multisite()) {
+        $this->wp->addAction(
           'signup_extra_fields',
-          '\MailPoet\Subscription\Registration::extendForm'
+          [$this->subscriptionRegistration, 'extendForm']
         );
-        add_action(
+        $this->wp->addAction(
           'wpmu_validate_user_signup',
-          '\MailPoet\Subscription\Registration::onMultiSiteRegister',
+          [$this->subscriptionRegistration, 'onMultiSiteRegister'],
           60,
           1
         );
       } else {
-        add_action(
+        $this->wp->addAction(
           'register_form',
-          '\MailPoet\Subscription\Registration::extendForm'
+          [$this->subscriptionRegistration, 'extendForm']
         );
-        add_action(
-          'register_post',
-          '\MailPoet\Subscription\Registration::onRegister',
+        // we need to process new users while they are registered.
+        // We used `register_post` before but that is too soon
+        //   because if registration fails during `registration_errors` we will keep the user as subscriber.
+        // So we are hooking to `registration_error` with a low priority.
+        $this->wp->addFilter(
+          'registration_errors',
+          [$this->subscriptionRegistration, 'onRegister'],
           60,
           3
         );
@@ -89,96 +185,202 @@ class Hooks {
     }
 
     // Manage subscription
-    add_action(
+    $this->wp->addAction(
       'admin_post_mailpoet_subscription_update',
-      '\MailPoet\Subscription\Manage::onSave'
+      [$this->subscriptionManage, 'onSave']
     );
-    add_action(
+    $this->wp->addAction(
       'admin_post_nopriv_mailpoet_subscription_update',
-      '\MailPoet\Subscription\Manage::onSave'
+      [$this->subscriptionManage, 'onSave']
     );
 
     // Subscription form
-    add_action(
+    $this->wp->addAction(
       'admin_post_mailpoet_subscription_form',
-      [$this->subscription_form, 'onSubmit']
+      [$this->subscriptionForm, 'onSubmit']
     );
-    add_action(
+    $this->wp->addAction(
       'admin_post_nopriv_mailpoet_subscription_form',
-      [$this->subscription_form, 'onSubmit']
+      [$this->subscriptionForm, 'onSubmit']
+    );
+    $this->wp->addFilter(
+      'the_content',
+      [$this->displayFormInWPContent, 'display']
     );
   }
 
-  function setupWPUsers() {
+  public function setupMailer() {
+    $this->wp->addAction('plugins_loaded', [
+      $this->wordpressMailerReplacer,
+      'replaceWordPressMailer',
+    ]);
+    $this->wp->addAction('login_init', [
+      $this->wordpressMailerReplacer,
+      'replaceWordPressMailer',
+    ]);
+    $this->wp->addAction('lostpassword_post', [
+      $this->wordpressMailerReplacer,
+      'replaceWordPressMailer',
+    ]);
+  }
+
+  public function setupWooCommerceSubscriptionEvents() {
+    $woocommerce = $this->settings->get('woocommerce', []);
+    // WooCommerce: subscribe on checkout
+    if (!empty($woocommerce['optin_on_checkout']['enabled'])) {
+      $this->wp->addAction(
+        'woocommerce_checkout_before_terms_and_conditions',
+        [$this->woocommerceSubscription, 'extendWooCommerceCheckoutForm']
+      );
+    }
+
+    $this->wp->addAction(
+      'woocommerce_checkout_update_order_meta',
+      [$this->woocommerceSubscription, 'subscribeOnCheckout'],
+      10, // this should execute after the WC sync call on the same hook
+      2
+    );
+  }
+
+  public function setupWPUsers() {
     // WP Users synchronization
-    add_action(
+    $this->wp->addAction(
       'user_register',
-      '\MailPoet\Segments\WP::synchronizeUser',
+      [$this->wpSegment, 'synchronizeUser'],
       6
     );
-    add_action(
+    $this->wp->addAction(
       'added_existing_user',
-      '\MailPoet\Segments\WP::synchronizeUser',
+      [$this->wpSegment, 'synchronizeUser'],
       6
     );
-    add_action(
+    $this->wp->addAction(
       'profile_update',
-      '\MailPoet\Segments\WP::synchronizeUser',
+      [$this->wpSegment, 'synchronizeUser'],
       6, 2
     );
-    add_action(
+    $this->wp->addAction(
       'delete_user',
-      '\MailPoet\Segments\WP::synchronizeUser',
+      [$this->wpSegment, 'synchronizeUser'],
       1
     );
     // multisite
-    add_action(
+    $this->wp->addAction(
       'deleted_user',
-      '\MailPoet\Segments\WP::synchronizeUser',
+      [$this->wpSegment, 'synchronizeUser'],
       1
     );
-    add_action(
+    $this->wp->addAction(
       'remove_user_from_blog',
-      '\MailPoet\Segments\WP::synchronizeUser',
+      [$this->wpSegment, 'synchronizeUser'],
       1
     );
   }
 
-  function setupImageSize() {
-    add_filter(
+  public function setupWooCommerceSettings() {
+    $this->wp->addAction('woocommerce_settings_start', [
+      $this->woocommerceSettings,
+      'disableWooCommerceSettings',
+    ]);
+  }
+
+  public function setupWooCommerceUsers() {
+    // WooCommerce Customers synchronization
+    $this->wp->addAction(
+      'woocommerce_new_customer',
+      [$this->woocommerceSegment, 'synchronizeRegisteredCustomer'],
+      7
+    );
+    $this->wp->addAction(
+      'woocommerce_update_customer',
+      [$this->woocommerceSegment, 'synchronizeRegisteredCustomer'],
+      7
+    );
+    $this->wp->addAction(
+      'woocommerce_delete_customer',
+      [$this->woocommerceSegment, 'synchronizeRegisteredCustomer'],
+      7
+    );
+    $this->wp->addAction(
+      'woocommerce_checkout_update_order_meta',
+      [$this->woocommerceSegment, 'synchronizeGuestCustomer'],
+      7
+    );
+    $this->wp->addAction(
+      'woocommerce_process_shop_order_meta',
+      [$this->woocommerceSegment, 'synchronizeGuestCustomer'],
+      7
+    );
+  }
+
+  public function setupWooCommercePurchases() {
+    // use both 'processing' and 'completed' states since payment hook and 'processing' status
+    // may be skipped with some payment methods (cheque) or when state transitioned manually
+    $acceptedOrderStates = WPFunctions::get()->applyFilters(
+      'mailpoet_purchase_order_states',
+      ['processing', 'completed']
+    );
+
+    foreach ($acceptedOrderStates as $status) {
+      WPFunctions::get()->addAction(
+        'woocommerce_order_status_' . $status,
+        [$this->woocommercePurchases, 'trackPurchase'],
+        10,
+        1
+      );
+    }
+  }
+
+  public function setupImageSize() {
+    $this->wp->addFilter(
       'image_size_names_choose',
-      array($this, 'appendImageSize'),
+      [$this, 'appendImageSize'],
       10, 1
     );
   }
 
-  function appendImageSize($sizes) {
-    return array_merge($sizes, array(
-      'mailpoet_newsletter_max' => __('MailPoet Newsletter', 'mailpoet')
-    ));
+  public function appendImageSize($sizes) {
+    return array_merge($sizes, [
+      'mailpoet_newsletter_max' => WPFunctions::get()->__('MailPoet Newsletter', 'mailpoet'),
+    ]);
   }
 
-  function setupListing() {
-    add_filter(
+  public function setupListing() {
+    $this->wp->addFilter(
       'set-screen-option',
-      array($this, 'setScreenOption'),
+      [$this, 'setScreenOption'],
       10, 3
     );
   }
 
-  function setScreenOption($status, $option, $value) {
-    if(preg_match('/^mailpoet_(.*)_per_page$/', $option)) {
+  public function setScreenOption($status, $option, $value) {
+    if (preg_match('/^mailpoet_(.*)_per_page$/', $option)) {
       return $value;
     } else {
       return $status;
     }
   }
 
-  function setupPostNotifications() {
-    add_action(
+  public function setupPostNotifications() {
+    $this->wp->addAction(
       'transition_post_status',
-      '\MailPoet\Newsletter\Scheduler\Scheduler::transitionHook',
+      [$this->postNotificationScheduler, 'transitionHook'],
       10, 3
     );
+  }
+
+  public function setupFooter() {
+    if (!Menu::isOnMailPoetAdminPage()) {
+      return;
+    }
+    $this->wp->addFilter(
+      'admin_footer_text',
+      [$this, 'setFooter'],
+      1, 1
+    );
+  }
+
+  public function setFooter($text) {
+    return '<a href="https://feedback.mailpoet.com/" rel="noopener noreferrer" target="_blank">Give feedback</a>';
   }
 }

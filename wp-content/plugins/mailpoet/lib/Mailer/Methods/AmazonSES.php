@@ -1,234 +1,252 @@
 <?php
+
 namespace MailPoet\Mailer\Methods;
 
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Mailer\Mailer;
+use MailPoet\Mailer\Methods\Common\BlacklistCheck;
 use MailPoet\Mailer\Methods\ErrorMappers\AmazonSESMapper;
 use MailPoet\WP\Functions as WPFunctions;
-
-if(!defined('ABSPATH')) exit;
+use MailPoetVendor\Swift_Message;
 
 class AmazonSES {
-  public $aws_access_key;
-  public $aws_secret_key;
-  public $aws_region;
-  public $aws_endpoint;
-  public $aws_signing_algorithm;
-  public $aws_service;
-  public $aws_termination_string;
-  public $hash_algorithm;
+  public $awsAccessKey;
+  public $awsSecretKey;
+  public $awsRegion;
+  public $awsEndpoint;
+  public $awsSigningAlgorithm;
+  public $awsService;
+  public $awsTerminationString;
+  public $hashAlgorithm;
   public $url;
   public $sender;
-  public $reply_to;
-  public $return_path;
+  public $replyTo;
+  public $returnPath;
   public $message;
   public $date;
-  public $date_without_time;
-  private $available_regions = array(
+  public $dateWithoutTime;
+  private $availableRegions = [
     'US East (N. Virginia)' => 'us-east-1',
     'US West (Oregon)' => 'us-west-2',
-    'EU (Ireland)' => 'eu-west-1'
-  );
+    'EU (Ireland)' => 'eu-west-1',
+    'EU (London)' => 'eu-west-2',
+    'EU (Frankfurt)' => 'eu-central-1',
+    'Canada (Central)' => 'ca-central-1',
+    'Asia Pacific (Mumbai)' => 'ap-south-1',
+    'Asia Pacific (Sydney)' => 'ap-southeast-2',
+    'South America (Sao Paulo)' => 'sa-east-1',
+  ];
 
   /** @var AmazonSESMapper */
-  private $error_mapper;
+  private $errorMapper;
+
+  /** @var BlacklistCheck */
+  private $blacklist;
 
   private $wp;
 
-  function __construct(
+  public function __construct(
     $region,
-    $access_key,
-    $secret_key,
+    $accessKey,
+    $secretKey,
     $sender,
-    $reply_to,
-    $return_path,
-    AmazonSESMapper $error_mapper
+    $replyTo,
+    $returnPath,
+    AmazonSESMapper $errorMapper
   ) {
-    $this->aws_access_key = $access_key;
-    $this->aws_secret_key = $secret_key;
-    $this->aws_region = (in_array($region, $this->available_regions)) ? $region : false;
-    if(!$this->aws_region) {
+    $this->awsAccessKey = $accessKey;
+    $this->awsSecretKey = $secretKey;
+    $this->awsRegion = (in_array($region, $this->availableRegions)) ? $region : false;
+    if (!$this->awsRegion) {
       throw new \Exception(__('Unsupported Amazon SES region', 'mailpoet'));
     }
-    $this->aws_endpoint = sprintf('email.%s.amazonaws.com', $this->aws_region);
-    $this->aws_signing_algorithm = 'AWS4-HMAC-SHA256';
-    $this->aws_service = 'ses';
-    $this->aws_termination_string = 'aws4_request';
-    $this->hash_algorithm = 'sha256';
-    $this->url = 'https://' . $this->aws_endpoint;
+    $this->awsEndpoint = sprintf('email.%s.amazonaws.com', $this->awsRegion);
+    $this->awsSigningAlgorithm = 'AWS4-HMAC-SHA256';
+    $this->awsService = 'ses';
+    $this->awsTerminationString = 'aws4_request';
+    $this->hashAlgorithm = 'sha256';
+    $this->url = 'https://' . $this->awsEndpoint;
     $this->sender = $sender;
-    $this->reply_to = $reply_to;
-    $this->return_path = ($return_path) ?
-      $return_path :
+    $this->replyTo = $replyTo;
+    $this->returnPath = ($returnPath) ?
+      $returnPath :
       $this->sender['from_email'];
     $this->date = gmdate('Ymd\THis\Z');
-    $this->date_without_time = gmdate('Ymd');
-    $this->error_mapper = $error_mapper;
+    $this->dateWithoutTime = gmdate('Ymd');
+    $this->errorMapper = $errorMapper;
     $this->wp = new WPFunctions();
+    $this->blacklist = new BlacklistCheck();
   }
 
-  function send($newsletter, $subscriber, $extra_params = array()) {
+  public function send($newsletter, $subscriber, $extraParams = []) {
+    if ($this->blacklist->isBlacklisted($subscriber)) {
+      $error = $this->errorMapper->getBlacklistError($subscriber);
+      return Mailer::formatMailerErrorResult($error);
+    }
     try {
       $result = $this->wp->wpRemotePost(
         $this->url,
-        $this->request($newsletter, $subscriber, $extra_params)
+        $this->request($newsletter, $subscriber, $extraParams)
       );
-    } catch(\Exception $e) {
-      $error = $this->error_mapper->getErrorFromException($e, $subscriber);
+    } catch (\Exception $e) {
+      $error = $this->errorMapper->getErrorFromException($e, $subscriber);
       return Mailer::formatMailerErrorResult($error);
     }
-    if(is_wp_error($result)) {
-      $error = $this->error_mapper->getConnectionError($result->get_error_message());
+    if (is_wp_error($result)) {
+      $error = $this->errorMapper->getConnectionError($result->get_error_message());
       return Mailer::formatMailerErrorResult($error);
     }
-    if($this->wp->wpRemoteRetrieveResponseCode($result) !== 200) {
+    if ($this->wp->wpRemoteRetrieveResponseCode($result) !== 200) {
       $response = simplexml_load_string($this->wp->wpRemoteRetrieveBody($result));
-      $error = $this->error_mapper->getErrorFromResponse($response, $subscriber);
+      $error = $this->errorMapper->getErrorFromResponse($response, $subscriber);
       return Mailer::formatMailerErrorResult($error);
     }
     return Mailer::formatMailerSendSuccessResult();
   }
 
-  function getBody($newsletter, $subscriber, $extra_params = array()) {
-    $this->message = $this->createMessage($newsletter, $subscriber, $extra_params);
-    $body = array(
+  public function getBody($newsletter, $subscriber, $extraParams = []) {
+    $this->message = $this->createMessage($newsletter, $subscriber, $extraParams);
+    $body = [
       'Action' => 'SendRawEmail',
       'Version' => '2010-12-01',
       'Source' => $this->sender['from_name_email'],
-      'RawMessage.Data' => $this->encodeMessage($this->message)
-    );
+      'RawMessage.Data' => $this->encodeMessage($this->message),
+    ];
     return $body;
   }
 
-  function createMessage($newsletter, $subscriber, $extra_params = array()) {
-    $message = \Swift_Message::newInstance()
+  public function createMessage($newsletter, $subscriber, $extraParams = []) {
+    $message = (new Swift_Message())
       ->setTo($this->processSubscriber($subscriber))
-      ->setFrom(array(
-          $this->sender['from_email'] => $this->sender['from_name']
-        ))
+      ->setFrom([
+          $this->sender['from_email'] => $this->sender['from_name'],
+        ])
       ->setSender($this->sender['from_email'])
-      ->setReplyTo(array(
-          $this->reply_to['reply_to_email'] =>  $this->reply_to['reply_to_name']
-        ))
-      ->setReturnPath($this->return_path)
+      ->setReplyTo([
+          $this->replyTo['reply_to_email'] => $this->replyTo['reply_to_name'],
+        ])
+      ->setReturnPath($this->returnPath)
       ->setSubject($newsletter['subject']);
-    if(!empty($extra_params['unsubscribe_url'])) {
+    if (!empty($extraParams['unsubscribe_url'])) {
       $headers = $message->getHeaders();
-      $headers->addTextHeader('List-Unsubscribe', '<' . $extra_params['unsubscribe_url'] . '>');
+      $headers->addTextHeader('List-Unsubscribe', '<' . $extraParams['unsubscribe_url'] . '>');
     }
-    if(!empty($newsletter['body']['html'])) {
+    if (!empty($newsletter['body']['html'])) {
       $message = $message->setBody($newsletter['body']['html'], 'text/html');
     }
-    if(!empty($newsletter['body']['text'])) {
+    if (!empty($newsletter['body']['text'])) {
       $message = $message->addPart($newsletter['body']['text'], 'text/plain');
     }
     return $message;
   }
 
-  function encodeMessage(\Swift_Message $message) {
+  public function encodeMessage(Swift_Message $message) {
     return base64_encode($message->toString());
   }
 
-  function processSubscriber($subscriber) {
-    preg_match('!(?P<name>.*?)\s<(?P<email>.*?)>!', $subscriber, $subscriber_data);
-    if(!isset($subscriber_data['email'])) {
-      $subscriber_data = array(
+  public function processSubscriber($subscriber) {
+    preg_match('!(?P<name>.*?)\s<(?P<email>.*?)>!', $subscriber, $subscriberData);
+    if (!isset($subscriberData['email'])) {
+      $subscriberData = [
         'email' => $subscriber,
-      );
+      ];
     }
-    return array(
-      $subscriber_data['email'] =>
-        (isset($subscriber_data['name'])) ? $subscriber_data['name'] : ''
-    );
+    return [
+      $subscriberData['email'] =>
+        (isset($subscriberData['name'])) ? $subscriberData['name'] : '',
+    ];
   }
 
-  function request($newsletter, $subscriber, $extra_params = array()) {
-    $body = array_map('urlencode', $this->getBody($newsletter, $subscriber, $extra_params));
-    return array(
+  public function request($newsletter, $subscriber, $extraParams = []) {
+    $body = array_map('urlencode', $this->getBody($newsletter, $subscriber, $extraParams));
+    return [
       'timeout' => 10,
       'httpversion' => '1.1',
       'method' => 'POST',
-      'headers' => array(
-        'Host' => $this->aws_endpoint,
+      'headers' => [
+        'Host' => $this->awsEndpoint,
         'Authorization' => $this->signRequest($body),
-        'X-Amz-Date' => $this->date
-      ),
-      'body' => urldecode(http_build_query($body, null, '&'))
-    );
+        'X-Amz-Date' => $this->date,
+      ],
+      'body' => urldecode(http_build_query($body, null, '&')),
+    ];
   }
 
-  function signRequest($body) {
-    $string_to_sign = $this->createStringToSign(
+  public function signRequest($body) {
+    $stringToSign = $this->createStringToSign(
       $this->getCredentialScope(),
       $this->getCanonicalRequest($body)
     );
     $signature = hash_hmac(
-      $this->hash_algorithm,
-      $string_to_sign,
+      $this->hashAlgorithm,
+      $stringToSign,
       $this->getSigningKey()
     );
 
     return sprintf(
       '%s Credential=%s/%s, SignedHeaders=host;x-amz-date, Signature=%s',
-      $this->aws_signing_algorithm,
-      $this->aws_access_key,
+      $this->awsSigningAlgorithm,
+      $this->awsAccessKey,
       $this->getCredentialScope(),
       $signature);
   }
 
-  function getCredentialScope() {
+  public function getCredentialScope() {
     return sprintf(
       '%s/%s/%s/%s',
-      $this->date_without_time,
-      $this->aws_region,
-      $this->aws_service,
-      $this->aws_termination_string);
+      $this->dateWithoutTime,
+      $this->awsRegion,
+      $this->awsService,
+      $this->awsTerminationString);
   }
 
-  function getCanonicalRequest($body) {
-    return implode("\n", array(
+  public function getCanonicalRequest($body) {
+    return implode("\n", [
       'POST',
       '/',
       '',
-      'host:' . $this->aws_endpoint,
+      'host:' . $this->awsEndpoint,
       'x-amz-date:' . $this->date,
       '',
       'host;x-amz-date',
-      hash($this->hash_algorithm, urldecode(http_build_query($body, null, '&')))
-    ));
+      hash($this->hashAlgorithm, urldecode(http_build_query($body, null, '&'))),
+    ]);
   }
 
-  function createStringToSign($credential_scope, $canonical_request) {
-    return implode("\n", array(
-      $this->aws_signing_algorithm,
+  public function createStringToSign($credentialScope, $canonicalRequest) {
+    return implode("\n", [
+      $this->awsSigningAlgorithm,
       $this->date,
-      $credential_scope,
-      hash($this->hash_algorithm, $canonical_request)
-    ));
+      $credentialScope,
+      hash($this->hashAlgorithm, $canonicalRequest),
+    ]);
   }
 
-  function getSigningKey() {
-    $date_key = hash_hmac(
-      $this->hash_algorithm,
-      $this->date_without_time,
-      'AWS4' . $this->aws_secret_key,
+  public function getSigningKey() {
+    $dateKey = hash_hmac(
+      $this->hashAlgorithm,
+      $this->dateWithoutTime,
+      'AWS4' . $this->awsSecretKey,
       true
     );
-    $region_key = hash_hmac(
-      $this->hash_algorithm,
-      $this->aws_region,
-      $date_key,
+    $regionKey = hash_hmac(
+      $this->hashAlgorithm,
+      $this->awsRegion,
+      $dateKey,
       true
     );
-    $service_key = hash_hmac(
-      $this->hash_algorithm,
-      $this->aws_service,
-      $region_key,
+    $serviceKey = hash_hmac(
+      $this->hashAlgorithm,
+      $this->awsService,
+      $regionKey,
       true
     );
     return hash_hmac(
-      $this->hash_algorithm,
-      $this->aws_termination_string,
-      $service_key,
+      $this->hashAlgorithm,
+      $this->awsTerminationString,
+      $serviceKey,
       true
     );
   }

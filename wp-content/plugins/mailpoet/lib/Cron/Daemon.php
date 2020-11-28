@@ -1,67 +1,80 @@
 <?php
-namespace MailPoet\Cron;
-use MailPoet\Cron\Workers\Scheduler as SchedulerWorker;
-use MailPoet\Cron\Workers\SendingQueue\Migration as MigrationWorker;
-use MailPoet\Cron\Workers\SendingQueue\SendingErrorHandler;
-use MailPoet\Cron\Workers\SendingQueue\SendingQueue as SendingQueueWorker;
-use MailPoet\Cron\Workers\Bounce as BounceWorker;
-use MailPoet\Cron\Workers\KeyCheck\PremiumKeyCheck as PremiumKeyCheckWorker;
-use MailPoet\Cron\Workers\KeyCheck\SendingServiceKeyCheck as SendingServiceKeyCheckWorker;
 
-if(!defined('ABSPATH')) exit;
+namespace MailPoet\Cron;
+
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Cron\Workers\WorkersFactory;
 
 class Daemon {
   public $timer;
 
-  function __construct() {
+  /** @var CronHelper */
+  private $cronHelper;
+
+  /** @var CronWorkerRunner */
+  private $cronWorkerRunner;
+
+  /** @var WorkersFactory */
+  private $workersFactory;
+
+  public function __construct(
+    CronHelper $cronHelper,
+    CronWorkerRunner $cronWorkerRunner,
+    WorkersFactory $workersFactory
+  ) {
     $this->timer = microtime(true);
+    $this->workersFactory = $workersFactory;
+    $this->cronWorkerRunner = $cronWorkerRunner;
+    $this->cronHelper = $cronHelper;
   }
 
-  function run($settings_daemon_data) {
-    $settings_daemon_data['run_started_at'] = time();
-    CronHelper::saveDaemon($settings_daemon_data);
-    try {
-      $this->executeMigrationWorker();
-      $this->executeScheduleWorker();
-      $this->executeQueueWorker();
-      $this->executeSendingServiceKeyCheckWorker();
-      $this->executePremiumKeyCheckWorker();
-      $this->executeBounceWorker();
-    } catch(\Exception $e) {
-      CronHelper::saveDaemonLastError($e->getMessage());
+  public function run($settingsDaemonData) {
+    $settingsDaemonData['run_started_at'] = time();
+    $this->cronHelper->saveDaemon($settingsDaemonData);
+
+    $errors = [];
+    foreach ($this->getWorkers() as $worker) {
+      try {
+        if ($worker instanceof CronWorkerInterface) {
+          $this->cronWorkerRunner->run($worker);
+        } else {
+          $worker->process($this->timer); // BC for workers not implementing CronWorkerInterface
+        }
+      } catch (\Exception $e) {
+        $workerClassNameParts = explode('\\', get_class($worker));
+        $errors[] = [
+          'worker' => end($workerClassNameParts),
+          'message' => $e->getMessage(),
+        ];
+      }
     }
+
+    if (!empty($errors)) {
+      $this->cronHelper->saveDaemonLastError($errors);
+    }
+
     // Log successful execution
-    CronHelper::saveDaemonRunCompleted(time());
+    $this->cronHelper->saveDaemonRunCompleted(time());
   }
 
-  function executeScheduleWorker() {
-    $scheduler = new SchedulerWorker($this->timer);
-    return $scheduler->process();
+  private function getWorkers() {
+    yield $this->workersFactory->createMigrationWorker();
+    yield $this->workersFactory->createStatsNotificationsWorker(); // not CronWorkerInterface compatible
+    yield $this->workersFactory->createScheduleWorker(); // not CronWorkerInterface compatible
+    yield $this->workersFactory->createQueueWorker(); // not CronWorkerInterface compatible
+    yield $this->workersFactory->createSendingServiceKeyCheckWorker();
+    yield $this->workersFactory->createPremiumKeyCheckWorker();
+    yield $this->workersFactory->createBounceWorker();
+    yield $this->workersFactory->createExportFilesCleanupWorker();
+    yield $this->workersFactory->createBeamerkWorker();
+    yield $this->workersFactory->createInactiveSubscribersWorker();
+    yield $this->workersFactory->createUnsubscribeTokensWorker();
+    yield $this->workersFactory->createWooCommerceSyncWorker();
+    yield $this->workersFactory->createAuthorizedSendingEmailsCheckWorker();
+    yield $this->workersFactory->createWooCommercePastOrdersWorker();
+    yield $this->workersFactory->createStatsNotificationsWorkerForAutomatedEmails();
+    yield $this->workersFactory->createSubscriberLinkTokensWorker();
   }
-
-  function executeQueueWorker() {
-    $queue = new SendingQueueWorker(new SendingErrorHandler(), $this->timer);
-    return $queue->process();
-  }
-
-  function executeSendingServiceKeyCheckWorker() {
-    $worker = new SendingServiceKeyCheckWorker($this->timer);
-    return $worker->process();
-  }
-
-  function executePremiumKeyCheckWorker() {
-    $worker = new PremiumKeyCheckWorker($this->timer);
-    return $worker->process();
-  }
-
-  function executeBounceWorker() {
-    $bounce = new BounceWorker($this->timer);
-    return $bounce->process();
-  }
-
-  function executeMigrationWorker() {
-    $migration = new MigrationWorker($this->timer);
-    return $migration->process();
-  }
-
 }

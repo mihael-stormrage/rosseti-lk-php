@@ -2,26 +2,37 @@
 
 namespace MailPoet\Newsletter\Shortcodes\Categories;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\Entities\NewsletterEntity;
+use MailPoet\Entities\SendingQueueEntity;
+use MailPoet\Entities\SubscriberEntity;
 use MailPoet\WP\Functions as WPFunctions;
 
-class Date {
-  static function process(
-    $shortcode_details
-  ) {
-    $action_mapping = array(
+class Date implements CategoryInterface {
+  public function process(
+    array $shortcodeDetails,
+    NewsletterEntity $newsletter = null,
+    SubscriberEntity $subscriber = null,
+    SendingQueueEntity $queue = null,
+    string $content = '',
+    bool $wpUserPreview = false
+  ): ?string {
+    $actionMapping = [
       'd' => 'd',
-      'dordinal' => 'dS',
+      'dordinal' => 'jS',
       'dtext' => 'l',
       'm' => 'm',
       'mtext' => 'F',
-      'y' => 'Y'
-    );
+      'y' => 'Y',
+    ];
     $wp = new WPFunctions();
-    if(!empty($action_mapping[$shortcode_details['action']])) {
-      return date_i18n($action_mapping[$shortcode_details['action']], $wp->currentTime('timestamp'));
+    if (!empty($actionMapping[$shortcodeDetails['action']])) {
+      return WPFunctions::get()->dateI18n($actionMapping[$shortcodeDetails['action']], $wp->currentTime('timestamp'));
     }
-    return ($shortcode_details['action'] === 'custom' && $shortcode_details['action_argument'] === 'format') ?
-      date_i18n($shortcode_details['action_argument_value'], $wp->currentTime('timestamp')) :
-      false;
+    return ($shortcodeDetails['action'] === 'custom' && $shortcodeDetails['action_argument'] === 'format') ?
+      WPFunctions::get()->dateI18n($shortcodeDetails['action_argument_value'], $wp->currentTime('timestamp')) :
+      null;
   }
 }

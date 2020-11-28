@@ -2,6 +2,10 @@
 
 namespace MailPoet\DI;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoetVendor\Symfony\Component\DependencyInjection\Container;
 use MailPoetVendor\Symfony\Component\DependencyInjection\ContainerBuilder;
 
 class ContainerFactory {
@@ -9,30 +13,25 @@ class ContainerFactory {
   /** @var IContainerConfigurator */
   private $configurator;
 
-  /** @var bool */
-  private $debug;
-
-  /**
-   * ContainerFactory constructor.
-   * @param bool $debug
-   */
-  public function __construct(IContainerConfigurator $configurator, $debug = false) {
-    $this->debug = $debug;
+  public function __construct(IContainerConfigurator $configurator) {
     $this->configurator = $configurator;
   }
 
-  function getContainer() {
-    $dump_class = '\\'. $this->configurator->getDumpNamespace() . '\\' . $this->configurator->getDumpClassname();
-    if(!$this->debug && class_exists($dump_class)) {
-      $container = new $dump_class();
-    } else {
+  /**
+   * @return Container
+   */
+  public function getContainer() {
+    $dumpClass = '\\' . $this->configurator->getDumpNamespace() . '\\' . $this->configurator->getDumpClassname();
+    if (class_exists($dumpClass)) {
+      $container = new $dumpClass();
+    } else { // Only for dev environment
       $container = $this->getConfiguredContainer();
       $container->compile();
     }
     return $container;
   }
 
-  function getConfiguredContainer() {
+  public function getConfiguredContainer() {
     return $this->configurator->configure(new ContainerBuilder());
   }
 }

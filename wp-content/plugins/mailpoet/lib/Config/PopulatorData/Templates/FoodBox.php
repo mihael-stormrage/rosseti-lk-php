@@ -1,6 +1,10 @@
 <?php
-
 namespace MailPoet\Config\PopulatorData\Templates;
+
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
 
 
 class FoodBox {
@@ -8,113 +12,113 @@ class FoodBox {
   private $template_image_url;
   private $social_icon_url;
 
-  function __construct($assets_url) {
+  public function __construct($assets_url) {
      $this->template_image_url = 'https://ps.w.org/mailpoet/assets/newsletter-templates/food_box';
     $this->social_icon_url = $assets_url . '/img/newsletter_editor/social-icons';
   }
 
-  function get() {
-    return array(
-      'name' => __("Welcome to FoodBox", 'mailpoet'),
-      'categories' => json_encode(array('standard', 'all')),
+  public function get() {
+    return [
+      'name' => WPFunctions::get()->__("Welcome to FoodBox", 'mailpoet'),
+      'categories' => json_encode(['welcome', 'all']),
       'readonly' => 1,
       'thumbnail' => $this->getThumbnail(),
       'body' => json_encode($this->getBody()),
-    );
+    ];
   }
 
   private function getBody() {
-    return array(
-      'content' => array(
+    return [
+      'content' => [
         'type' => 'container',
         'orientation' => 'vertical',
-        'styles' => array(
-          'block' => array(
+        'styles' => [
+          'block' => [
             'backgroundColor' => 'transparent',
-          ),
-        ),
-        'blocks' => array(
-          0 => array(
+          ],
+        ],
+        'blocks' => [
+          0 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#f4f4f4',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          1 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          2 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          2 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/Food-Delivery-Logo.png',
@@ -122,24 +126,24 @@ class FoodBox {
                     'fullWidth' => false,
                     'width' => '640px',
                     'height' => '180px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/Food-Delivery-App.png',
@@ -147,86 +151,86 @@ class FoodBox {
                     'fullWidth' => false,
                     'width' => '640px',
                     'height' => '180px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          3 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          3 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          4 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          4 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'text',
                     'text' => '<h1><strong>Welcome to FoodBox</strong></h1>
                                   <h2><strong>Lorem ipsum dolor sit amet</strong></h2>
                                   <p>Curabitur sollicitudin eros eu cursus sollicitudin. Suspendisse laoreet sollicitudin urna, ut lacinia risus dictum a. Integer a neque eu magna commodo sodales eu eget ante.</p>',
-                  ),
-                  2 => array(
+                  ],
+                  2 => [
                     'type' => 'button',
                     'text' => 'Get Started',
                     'url' => '',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#7cc119',
                         'borderColor' => '#7cc119',
                         'borderWidth' => '0px',
@@ -239,21 +243,21 @@ class FoodBox {
                         'fontSize' => '14px',
                         'fontWeight' => 'bold',
                         'textAlign' => 'left',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              1 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/Food-Delivery-Focus.jpg',
@@ -261,104 +265,104 @@ class FoodBox {
                     'fullWidth' => false,
                     'width' => '800px',
                     'height' => '800px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          5 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          5 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'divider',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'padding' => '31.5px',
                         'borderStyle' => 'solid',
                         'borderWidth' => '2px',
                         'borderColor' => '#e5e5e5',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          6 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          6 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'text',
                     'text' => '<h2 style="text-align: center;">Get started in 3 simple steps</h2>',
-                  ),
-                ),
-              ),
-            ),
-          ),
-          7 => array(
+                  ],
+                ],
+              ],
+            ],
+          ],
+          7 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/Food-Delivery-1-1.png',
@@ -366,37 +370,37 @@ class FoodBox {
                     'fullWidth' => false,
                     'width' => '800px',
                     'height' => '250px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'text',
                     'text' => '<p style="text-align: center;">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur sollicitudin eros eu cursus sollicitudin.</p>',
-                  ),
-                ),
-              ),
-              1 => array(
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/Food-Delivery-2-1.png',
@@ -404,37 +408,37 @@ class FoodBox {
                     'fullWidth' => false,
                     'width' => '800px',
                     'height' => '250px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'text',
                     'text' => '<p style="text-align: center;"><span style="text-align: center;">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur sollicitudin eros eu cursus sollicitudin.</span></p>',
-                  ),
-                ),
-              ),
-              2 => array(
+                  ],
+                ],
+              ],
+              2 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'image',
                     'link' => '',
                     'src' => $this->template_image_url . '/Food-Delivery-3-1.png',
@@ -442,53 +446,53 @@ class FoodBox {
                     'fullWidth' => false,
                     'width' => '800px',
                     'height' => '250px',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'text',
                     'text' => '<p style="text-align: center;"><span style="text-align: center;">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur sollicitudin eros eu cursus sollicitudin.</span></p>',
-                  ),
-                ),
-              ),
-            ),
-          ),
-          8 => array(
+                  ],
+                ],
+              ],
+            ],
+          ],
+          8 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => 'transparent',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '30px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'button',
                     'text' => 'Get Started',
                     'url' => '',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => '#7cc119',
                         'borderColor' => '#7cc119',
                         'borderWidth' => '0px',
@@ -501,78 +505,78 @@ class FoodBox {
                         'fontSize' => '14px',
                         'fontWeight' => 'bold',
                         'textAlign' => 'center',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '25px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          9 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          9 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#4599da',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '30px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'text',
                     'text' => '<p style="text-align: center; font-size: 14px;"><strong><span style="color: #ffffff;">Link 1 - Link 2 - Link 3 - Link 4</span></strong></p>',
-                  ),
-                ),
-              ),
-              1 => array(
+                  ],
+                ],
+              ],
+              1 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '24px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'social',
                     'iconSet' => 'full-symbol-grey',
-                    'icons' => array(
-                      0 => array(
+                    'icons' => [
+                      0 => [
                         'type' => 'socialIcon',
                         'iconType' => 'facebook',
                         'link' => 'http://www.facebook.com',
@@ -580,8 +584,8 @@ class FoodBox {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Facebook',
-                      ),
-                      1 => array(
+                      ],
+                      1 => [
                         'type' => 'socialIcon',
                         'iconType' => 'twitter',
                         'link' => 'http://www.twitter.com',
@@ -589,8 +593,8 @@ class FoodBox {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Twitter',
-                      ),
-                      2 => array(
+                      ],
+                      2 => [
                         'type' => 'socialIcon',
                         'iconType' => 'youtube',
                         'link' => 'http://www.youtube.com',
@@ -598,8 +602,8 @@ class FoodBox {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Youtube',
-                      ),
-                      3 => array(
+                      ],
+                      3 => [
                         'type' => 'socialIcon',
                         'iconType' => 'instagram',
                         'link' => 'http://instagram.com',
@@ -607,8 +611,8 @@ class FoodBox {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Instagram',
-                      ),
-                      4 => array(
+                      ],
+                      4 => [
                         'type' => 'socialIcon',
                         'iconType' => 'website',
                         'link' => '',
@@ -616,142 +620,142 @@ class FoodBox {
                         'height' => '32px',
                         'width' => '32px',
                         'text' => 'Website',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          10 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          10 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#4599da',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '25px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          11 => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          11 => [
             'type' => 'container',
             'orientation' => 'horizontal',
-            'styles' => array(
-              'block' => array(
+            'styles' => [
+              'block' => [
                 'backgroundColor' => '#f4f4f4',
-              ),
-            ),
-            'blocks' => array(
-              0 => array(
+              ],
+            ],
+            'blocks' => [
+              0 => [
                 'type' => 'container',
                 'orientation' => 'vertical',
-                'styles' => array(
-                  'block' => array(
+                'styles' => [
+                  'block' => [
                     'backgroundColor' => 'transparent',
-                  ),
-                ),
-                'blocks' => array(
-                  0 => array(
+                  ],
+                ],
+                'blocks' => [
+                  0 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '20px',
-                      ),
-                    ),
-                  ),
-                  1 => array(
+                      ],
+                    ],
+                  ],
+                  1 => [
                     'type' => 'footer',
-                    'text' => '<p><a href="[link:subscription_unsubscribe_url]">Unsubscribe</a> | <a href="[link:subscription_manage_url]">Manage subscription</a><br />Add your postal address here!</p>',
-                    'styles' => array(
-                      'block' => array(
+                    'text' => '<p><a href="[link:subscription_unsubscribe_url]">'.WPFunctions::get()->__("Unsubscribe", 'mailpoet').'</a> | <a href="[link:subscription_manage_url]">'.WPFunctions::get()->__("Manage your subscription", 'mailpoet').'</a><br />'.WPFunctions::get()->__("Add your postal address here!", 'mailpoet').'</p>',
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
-                      ),
-                      'text' => array(
+                      ],
+                      'text' => [
                         'fontColor' => '#222222',
                         'fontFamily' => 'Arial',
                         'fontSize' => '12px',
                         'textAlign' => 'center',
-                      ),
-                      'link' => array(
+                      ],
+                      'link' => [
                         'fontColor' => '#6cb7d4',
                         'textDecoration' => 'none',
-                      ),
-                    ),
-                  ),
-                  2 => array(
+                      ],
+                    ],
+                  ],
+                  2 => [
                     'type' => 'spacer',
-                    'styles' => array(
-                      'block' => array(
+                    'styles' => [
+                      'block' => [
                         'backgroundColor' => 'transparent',
                         'height' => '40px',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      'globalStyles' => array(
-        'text' => array(
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ],
+        ],
+      ],
+      'globalStyles' => [
+        'text' => [
           'fontColor' => '#000000',
           'fontFamily' => 'Arial',
           'fontSize' => '12px',
-        ),
-        'h1' => array(
+        ],
+        'h1' => [
           'fontColor' => '#4599da',
           'fontFamily' => 'Arial',
           'fontSize' => '26px',
-        ),
-        'h2' => array(
+        ],
+        'h2' => [
           'fontColor' => '#878787',
           'fontFamily' => 'Arial',
           'fontSize' => '18px',
-        ),
-        'h3' => array(
+        ],
+        'h3' => [
           'fontColor' => '#333333',
           'fontFamily' => 'Arial',
           'fontSize' => '14px',
-        ),
-        'link' => array(
+        ],
+        'link' => [
           'fontColor' => '#4599da',
           'textDecoration' => 'underline',
-        ),
-        'wrapper' => array(
+        ],
+        'wrapper' => [
           'backgroundColor' => '#ffffff',
-        ),
-        'body' => array(
+        ],
+        'body' => [
           'backgroundColor' => '#f4f4f4',
-        ),
-      ),
-    );
+        ],
+      ],
+    ];
   }
 
   private function getThumbnail() {
-    return $this->template_image_url . '/welcome-to-foodbox.jpg';
+    return $this->template_image_url . '/thumbnail.20190411-1500.jpg';
   }
 
 }

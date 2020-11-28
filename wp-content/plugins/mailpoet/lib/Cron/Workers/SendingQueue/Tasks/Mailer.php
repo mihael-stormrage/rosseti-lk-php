@@ -1,78 +1,81 @@
 <?php
+
 namespace MailPoet\Cron\Workers\SendingQueue\Tasks;
+
+if (!defined('ABSPATH')) exit;
+
 
 use MailPoet\Mailer\Mailer as MailerFactory;
 use MailPoet\Mailer\MailerLog;
 
-if(!defined('ABSPATH')) exit;
-
 class Mailer {
   public $mailer;
 
-  function __construct($mailer = false) {
+  public function __construct($mailer = false) {
     $this->mailer = ($mailer) ? $mailer : $this->configureMailer();
   }
 
-  function configureMailer($newsletter = null) {
-    $sender['address'] = (!empty($newsletter->sender_address)) ?
-      $newsletter->sender_address :
+  public function configureMailer($newsletter = null) {
+    $sender['address'] = (!empty($newsletter->senderAddress)) ?
+      $newsletter->senderAddress :
       false;
-    $sender['name'] = (!empty($newsletter->sender_name)) ?
-      $newsletter->sender_name :
+    $sender['name'] = (!empty($newsletter->senderName)) ?
+      $newsletter->senderName :
       false;
-    $reply_to['address'] = (!empty($newsletter->reply_to_address)) ?
-      $newsletter->reply_to_address :
+    $replyTo['address'] = (!empty($newsletter->replyToAddress)) ?
+      $newsletter->replyToAddress :
       false;
-    $reply_to['name'] = (!empty($newsletter->reply_to_name)) ?
-      $newsletter->reply_to_name :
+    $replyTo['name'] = (!empty($newsletter->replyToName)) ?
+      $newsletter->replyToName :
       false;
-    if(!$sender['address']) {
+    if (!$sender['address']) {
       $sender = false;
     }
-    if(!$reply_to['address']) {
-      $reply_to = false;
+    if (!$replyTo['address']) {
+      $replyTo = false;
     }
-    $this->mailer = new MailerFactory($method = false, $sender, $reply_to);
+    $this->mailer = new MailerFactory();
+    $this->mailer->init($method = false, $sender, $replyTo);
     return $this->mailer;
   }
 
-  function getMailerLog() {
+  public function getMailerLog() {
     return MailerLog::getMailerLog();
   }
 
-  function updateSentCount() {
+  public function updateSentCount() {
     return MailerLog::incrementSentCount();
   }
 
-  function getProcessingMethod() {
-    return ($this->mailer->mailer_config['method'] === MailerFactory::METHOD_MAILPOET) ?
+  public function getProcessingMethod() {
+    return ($this->mailer->mailerConfig['method'] === MailerFactory::METHOD_MAILPOET) ?
       'bulk' :
       'individual';
   }
 
-  function prepareSubscriberForSending($subscriber) {
+  public function prepareSubscriberForSending($subscriber) {
     return $this->mailer->formatSubscriberNameAndEmailAddress($subscriber);
   }
 
-  function sendBulk($prepared_newsletters, $prepared_subscribers, $extra_params = array()) {
-    if($this->getProcessingMethod() === 'individual') {
+  public function sendBulk($preparedNewsletters, $preparedSubscribers, $extraParams = []) {
+    if ($this->getProcessingMethod() === 'individual') {
       throw new \LogicException('Trying to send a batch with individual processing method');
     }
-    return $this->mailer->mailer_instance->send(
-      $prepared_newsletters,
-      $prepared_subscribers,
-      $extra_params
+    return $this->mailer->mailerInstance->send(
+      $preparedNewsletters,
+      $preparedSubscribers,
+      $extraParams
     );
   }
 
-  function send($prepared_newsletter, $prepared_subscriber, $extra_params = array()) {
-    if($this->getProcessingMethod() === 'bulk') {
+  public function send($preparedNewsletter, $preparedSubscriber, $extraParams = []) {
+    if ($this->getProcessingMethod() === 'bulk') {
       throw new \LogicException('Trying to send an individual email with a bulk processing method');
     }
-    return $this->mailer->mailer_instance->send(
-      $prepared_newsletter,
-      $prepared_subscriber,
-      $extra_params
+    return $this->mailer->mailerInstance->send(
+      $preparedNewsletter,
+      $preparedSubscriber,
+      $extraParams
     );
   }
 }

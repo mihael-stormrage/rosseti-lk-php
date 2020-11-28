@@ -1,61 +1,62 @@
 <?php
+
 namespace MailPoet\Tasks\Subscribers;
 
-use MailPoet\Models\ScheduledTaskSubscriber;
-use function MailPoet\Util\array_column;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\Models\ScheduledTaskSubscriber;
 
 class BatchIterator implements \Iterator, \Countable {
-  private $task_id;
-  private $batch_size;
-  private $last_processed_id = 0;
-  private $batch_last_id;
+  private $taskId;
+  private $batchSize;
+  private $lastProcessedId = 0;
+  private $batchLastId;
 
-  function __construct($task_id, $batch_size) {
-    if($task_id <= 0) {
+  public function __construct($taskId, $batchSize) {
+    if ($taskId <= 0) {
       throw new \Exception('Task ID must be greater than zero');
-    } elseif($batch_size <= 0) {
+    } elseif ($batchSize <= 0) {
       throw new \Exception('Batch size must be greater than zero');
     }
-    $this->task_id = (int)$task_id;
-    $this->batch_size = (int)$batch_size;
+    $this->taskId = (int)$taskId;
+    $this->batchSize = (int)$batchSize;
   }
 
-  function rewind() {
-    $this->last_processed_id = 0;
+  public function rewind() {
+    $this->lastProcessedId = 0;
   }
 
-  function current() {
+  public function current() {
     $subscribers = $this->getSubscribers()
       ->orderByAsc('subscriber_id')
-      ->limit($this->batch_size)
+      ->limit($this->batchSize)
       ->findArray();
     $subscribers = array_column($subscribers, 'subscriber_id');
-    $this->batch_last_id = end($subscribers);
+    $this->batchLastId = end($subscribers);
     return $subscribers;
   }
 
-  function key() {
+  public function key() {
     return null;
   }
 
-  function next() {
-    $this->last_processed_id = $this->batch_last_id;
+  public function next() {
+    $this->lastProcessedId = $this->batchLastId;
   }
 
-  function valid() {
+  public function valid() {
     return $this->count() > 0;
   }
 
-  function count() {
+  public function count() {
     return $this->getSubscribers()->count();
   }
 
   private function getSubscribers() {
     return ScheduledTaskSubscriber::select('subscriber_id')
-      ->where('task_id', $this->task_id)
-      ->whereGt('subscriber_id', $this->last_processed_id)
+      ->where('task_id', $this->taskId)
+      ->whereGt('subscriber_id', $this->lastProcessedId)
       ->where('processed', ScheduledTaskSubscriber::STATUS_UNPROCESSED);
   }
 }

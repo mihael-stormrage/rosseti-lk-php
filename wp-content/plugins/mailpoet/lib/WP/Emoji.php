@@ -1,26 +1,70 @@
 <?php
+
 namespace MailPoet\WP;
 
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
+
 class Emoji {
-  static function encodeForUTF8Column($table, $field, $value) {
+  /** @var WPFunctions */
+  private $wp;
+
+  public function __construct(WPFunctions $wp = null) {
+    if ($wp === null) {
+      $wp = new WPFunctions();
+    }
+    $this->wp = $wp;
+  }
+
+  public function encodeEmojisInBody($newsletterRenderedBody) {
+    if (is_array($newsletterRenderedBody)) {
+      return array_map([$this, 'encodeRenderedBodyForUTF8Column'], $newsletterRenderedBody);
+    }
+    return $this->encodeRenderedBodyForUTF8Column($newsletterRenderedBody);
+  }
+
+  public function decodeEmojisInBody($newsletterRenderedBody) {
+    if (is_array($newsletterRenderedBody)) {
+      return array_map([$this, 'decodeEntities'], $newsletterRenderedBody);
+    }
+    return $this->decodeEntities($newsletterRenderedBody);
+  }
+
+  public function sanitizeEmojisInFormBody(array $body): array {
+    $bodyJson = json_encode($body, JSON_UNESCAPED_UNICODE);
+    $fixedJson = $this->encodeForUTF8Column(MP_FORMS_TABLE, 'body', $bodyJson);
+    return json_decode($fixedJson, true);
+  }
+
+  private function encodeRenderedBodyForUTF8Column($value) {
+    return $this->encodeForUTF8Column(
+      MP_SENDING_QUEUES_TABLE,
+      'newsletter_rendered_body',
+      $value
+    );
+  }
+
+  public function encodeForUTF8Column($table, $field, $value) {
     global $wpdb;
     $charset = $wpdb->get_col_charset($table, $field);
-    if($charset === 'utf8') {
-      $value = wp_encode_emoji($value);
+    if ($charset === 'utf8') {
+      $value = $this->wp->wpEncodeEmoji($value);
     }
     return $value;
   }
 
-  static function decodeEntities($content) {
-    // Based on wp_staticize_emoji()
+  public function decodeEntities($content) {
+    // Based on WPFunctions::get()->wpStaticizeEmoji()
 
     // Loosely match the Emoji Unicode range.
     $regex = '/(&#x[2-3][0-9a-f]{3};|&#x1f[1-6][0-9a-f]{2};)/';
 
-    $matches = array();
-    if(preg_match_all($regex, $content, $matches)) {
-      if(!empty($matches[1])) {
-        foreach($matches[1] as $emoji) {
+    $matches = [];
+    if (preg_match_all($regex, $content, $matches)) {
+      if (!empty($matches[1])) {
+        foreach ($matches[1] as $emoji) {
           $entity = html_entity_decode($emoji, ENT_COMPAT, 'UTF-8');
           $content = str_replace($emoji, $entity, $content);
         }

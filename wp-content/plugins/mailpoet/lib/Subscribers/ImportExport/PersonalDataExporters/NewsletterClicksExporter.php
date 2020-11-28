@@ -2,32 +2,36 @@
 
 namespace MailPoet\Subscribers\ImportExport\PersonalDataExporters;
 
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Models\StatisticsClicks;
 use MailPoet\Models\Subscriber;
+use MailPoet\WP\Functions as WPFunctions;
 
 class NewsletterClicksExporter {
 
   const LIMIT = 100;
 
-  function export($email, $page = 1) {
+  public function export($email, $page = 1) {
     $data = $this->exportSubscriber(Subscriber::findOne(trim($email)), $page);
-    return array(
+    return [
       'data' => $data,
       'done' => count($data) < self::LIMIT,
-    );
+    ];
   }
 
   private function exportSubscriber($subscriber, $page) {
-    if(!$subscriber) return array();
+    if (!$subscriber) return [];
 
-    $result = array();
+    $result = [];
 
     $statistics = StatisticsClicks::getAllForSubscriber($subscriber)
        ->limit(self::LIMIT)
        ->offset(self::LIMIT * ($page - 1))
        ->findArray();
 
-    foreach($statistics as $row) {
+    foreach ($statistics as $row) {
       $result[] = $this->exportNewsletter($row);
     }
 
@@ -35,25 +39,24 @@ class NewsletterClicksExporter {
   }
 
   private function exportNewsletter($row) {
-    $newsletter_data = array();
-    $newsletter_data[] = array(
-      'name' => __('Email subject', 'mailpoet'),
+    $newsletterData = [];
+    $newsletterData[] = [
+      'name' => WPFunctions::get()->__('Email subject', 'mailpoet'),
       'value' => $row['newsletter_rendered_subject'],
-    );
-    $newsletter_data[] = array(
-      'name' => __('Timestamp of the click event', 'mailpoet'),
+    ];
+    $newsletterData[] = [
+      'name' => WPFunctions::get()->__('Timestamp of the click event', 'mailpoet'),
       'value' => $row['created_at'],
-    );
-    $newsletter_data[] = array(
-      'name' => __('URL', 'mailpoet'),
+    ];
+    $newsletterData[] = [
+      'name' => WPFunctions::get()->__('URL', 'mailpoet'),
       'value' => $row['url'],
-    );
-    return array(
+    ];
+    return [
       'group_id' => 'mailpoet-newsletter-clicks',
-      'group_label' => __('MailPoet Emails Clicks', 'mailpoet'),
+      'group_label' => WPFunctions::get()->__('MailPoet Emails Clicks', 'mailpoet'),
       'item_id' => 'newsletter-' . $row['id'],
-      'data' => $newsletter_data,
-    );
+      'data' => $newsletterData,
+    ];
   }
-
 }

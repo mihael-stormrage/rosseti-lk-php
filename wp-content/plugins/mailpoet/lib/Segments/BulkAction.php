@@ -2,53 +2,55 @@
 
 namespace MailPoet\Segments;
 
-use MailPoet\Listing\Handler;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\Entities\SegmentEntity;
+use MailPoet\Listing\BulkActionController;
 use MailPoet\Models\Segment;
-use MailPoet\WP\Hooks;
 
 class BulkAction {
+  /** @var BulkActionController */
+  private $actionsController;
 
-  private $data = null;
+  /** @var array  */
+  private $data;
 
-  function __construct($data) {
+  public function __construct(array $data) {
     $this->data = $data;
+    $this->actionsController = ContainerWrapper::getInstance()->get(BulkActionController::class);
   }
 
   /**
    * @return array
    * @throws \Exception
    */
-  function apply() {
-    if(!isset($this->data['listing']['filter']['segment'])) {
+  public function apply() {
+    if (!isset($this->data['listing']['filter']['segment'])) {
       throw new \InvalidArgumentException('Missing segment id');
     }
     $segment = Segment::findOne($this->data['listing']['filter']['segment']);
-    if($segment) {
+    if ($segment instanceof Segment) {
       $segment = $segment->asArray();
     }
     return $this->applySegment($segment);
   }
 
   /**
-   * @param array $segment
+   * @param array|bool $segment
    *
    * @return array
    * @throws \Exception
    */
   private function applySegment($segment) {
-    if(!$segment || $segment['type'] === Segment::TYPE_DEFAULT || $segment['type'] === Segment::TYPE_WP_USERS) {
-      $bulk_action = new \MailPoet\Listing\BulkActionController(new Handler());
-      return $bulk_action->apply('\MailPoet\Models\Subscriber', $this->data);
-    } else {
-      $handlers = Hooks::applyFilters('mailpoet_subscribers_in_segment_apply_bulk_action_handlers', array());
-      foreach($handlers as $handler) {
-        $meta = $handler->apply($segment, $this->data);
-        if($meta) {
-          return $meta;
-        }
-      }
-      throw new \InvalidArgumentException('No handler found for segment');
+    if (is_bool($segment)
+      || in_array($segment['type'], [SegmentEntity::TYPE_DEFAULT, SegmentEntity::TYPE_WP_USERS, SegmentEntity::TYPE_WC_USERS], true)
+    ) {
+      return $this->actionsController->apply('\MailPoet\Models\Subscriber', $this->data);
+    } elseif (isset($segment['type']) && $segment['type'] === SegmentEntity::TYPE_DYNAMIC) {
+      return $this->actionsController->apply('\MailPoet\Models\SubscribersInDynamicSegment', $this->data);
     }
+    throw new \InvalidArgumentException('No handler found for segment');
   }
-
 }

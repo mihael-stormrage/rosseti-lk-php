@@ -1,98 +1,195 @@
 <?php
+
 namespace MailPoet\Util;
 
-class ConflictResolver {
-  public $permitted_assets_locations = array(
-    'styles' => array(
-      // WP default
-      '^/wp-admin',
-      '^/wp-includes',
-      // CDN
-      'googleapis.com/ajax/libs',
-      'wp.com',
-      // third-party
-      'query-monitor',
-      'wpt-tx-updater-network'
-    ),
-    'scripts' => array(
-      // WP default
-      '^/wp-admin',
-      '^/wp-includes',
-      // CDN
-      'googleapis.com/ajax/libs',
-      'wp.com',
-      // third-party
-      'query-monitor',
-      'wpt-tx-updater-network'
-    )
-  );
+if (!defined('ABSPATH')) exit;
 
-  function init() {
-    add_action(
+
+use MailPoet\WP\Functions as WPFunctions;
+
+class ConflictResolver {
+  public $permittedAssetsLocations = [
+    'styles' => [
+      'mailpoet',
+      // WP default
+      '^/wp-admin',
+      '^/wp-includes',
+      // CDN
+      'googleapis.com/ajax/libs',
+      'wp.com',
+      // third-party
+      'query-monitor',
+      'wpt-tx-updater-network',
+    ],
+    'scripts' => [
+      'mailpoet',
+      // WP default
+      '^/wp-admin',
+      '^/wp-includes',
+      // CDN
+      'googleapis.com/ajax/libs',
+      'wp.com',
+      // third-party
+      'query-monitor',
+      'wpt-tx-updater-network',
+    ],
+  ];
+
+  public function init() {
+    WPFunctions::get()->addAction(
       'mailpoet_conflict_resolver_router_url_query_parameters',
-      array(
+      [
         $this,
-        'resolveRouterUrlQueryParametersConflict'
-      )
+        'resolveRouterUrlQueryParametersConflict',
+      ]
     );
-    add_action(
+    WPFunctions::get()->addAction(
       'mailpoet_conflict_resolver_styles',
-      array(
+      [
         $this,
-        'resolveStylesConflict'
-      )
+        'resolveStylesConflict',
+      ]
     );
-    add_action(
+    WPFunctions::get()->addAction(
       'mailpoet_conflict_resolver_scripts',
-      array(
+      [
         $this,
-        'resolveScriptsConflict'
-      )
+        'resolveScriptsConflict',
+      ]
+    );
+    WPFunctions::get()->addAction(
+      'mailpoet_conflict_resolver_scripts',
+      [
+        $this,
+        'resolveEditorConflict',
+      ]
+    );
+    WPFunctions::get()->addAction(
+      'mailpoet_conflict_resolver_scripts',
+      [
+        $this,
+        'resolveTinyMceConflict',
+      ]
     );
   }
 
-  function resolveRouterUrlQueryParametersConflict() {
+  public function resolveRouterUrlQueryParametersConflict() {
     // prevents other plugins from overtaking URL query parameters 'action=' and 'endpoint='
     unset($_GET['endpoint'], $_GET['action']);
   }
 
-  function resolveStylesConflict() {
+  public function resolveStylesConflict() {
     $_this = $this;
-    $_this->permitted_assets_locations['styles'] = apply_filters('mailpoet_conflict_resolver_whitelist_style', $_this->permitted_assets_locations['styles']);
+    $_this->permittedAssetsLocations['styles'] = WPFunctions::get()->applyFilters('mailpoet_conflict_resolver_whitelist_style', $_this->permittedAssetsLocations['styles']);
     // unload all styles except from the list of allowed
-    $dequeue_styles = function() use($_this) {
-      global $wp_styles;
-      if(empty($wp_styles->queue)) return;
-      foreach($wp_styles->queue as $wp_style) {
-        if(empty($wp_styles->registered[$wp_style])) continue;
-        $registered_style = $wp_styles->registered[$wp_style];
-        if(!preg_match('!' . implode('|', $_this->permitted_assets_locations['styles']) . '!i', $registered_style->src)) {
-          wp_dequeue_style($wp_style);
+    $dequeueStyles = function() use($_this) {
+      global $wp_styles; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+      if (!isset($wp_styles->registered)) return; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+      if (empty($wp_styles->queue)) return; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+      foreach ($wp_styles->queue as $wpStyle) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        if (empty($wp_styles->registered[$wpStyle])) continue; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        $registeredStyle = $wp_styles->registered[$wpStyle]; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        if (!is_string($registeredStyle->src)) {
+          continue;
+        }
+        if (!preg_match('!' . implode('|', $_this->permittedAssetsLocations['styles']) . '!i', $registeredStyle->src)) {
+          WPFunctions::get()->wpDequeueStyle($wpStyle);
         }
       }
     };
-    add_action('wp_print_styles', $dequeue_styles, PHP_INT_MAX);
-    add_action('admin_print_styles', $dequeue_styles, PHP_INT_MAX);
-    add_action('admin_print_footer_scripts', $dequeue_styles, PHP_INT_MAX);
-    add_action('admin_footer', $dequeue_styles, PHP_INT_MAX);
+
+    // execute last in the following hooks
+    $executeLast = PHP_INT_MAX;
+    WPFunctions::get()->addAction('admin_enqueue_scripts', $dequeueStyles, $executeLast); // used also for styles
+    WPFunctions::get()->addAction('admin_footer', $dequeueStyles, $executeLast);
+
+    // execute first in hooks for printing (after printing is too late)
+    $executeFirst = defined('PHP_INT_MIN') ? constant('PHP_INT_MIN') : ~PHP_INT_MAX;
+    WPFunctions::get()->addAction('admin_print_styles', $dequeueStyles, $executeFirst);
+    WPFunctions::get()->addAction('admin_print_footer_scripts', $dequeueStyles, $executeFirst);
   }
 
-  function resolveScriptsConflict() {
+  public function resolveScriptsConflict() {
     $_this = $this;
-    $_this->permitted_assets_locations['scripts'] = apply_filters('mailpoet_conflict_resolver_whitelist_script', $_this->permitted_assets_locations['scripts']);
+    $_this->permittedAssetsLocations['scripts'] = WPFunctions::get()->applyFilters('mailpoet_conflict_resolver_whitelist_script', $_this->permittedAssetsLocations['scripts']);
     // unload all scripts except from the list of allowed
-    $dequeue_scripts = function() use($_this) {
-      global $wp_scripts;
-      foreach($wp_scripts->queue as $wp_script) {
-        if(empty($wp_scripts->registered[$wp_script])) continue;
-        $registered_script = $wp_scripts->registered[$wp_script];
-        if(!preg_match('!' . implode('|', $_this->permitted_assets_locations['scripts']) . '!i', $registered_script->src)) {
-          wp_dequeue_script($wp_script);
+    $dequeueScripts = function() use($_this) {
+      global $wp_scripts; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+      foreach ($wp_scripts->queue as $wpScript) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        if (empty($wp_scripts->registered[$wpScript])) continue; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        $registeredScript = $wp_scripts->registered[$wpScript]; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        if (!is_string($registeredScript->src)) {
+          continue;
+        }
+        if (!preg_match('!' . implode('|', $_this->permittedAssetsLocations['scripts']) . '!i', $registeredScript->src)) {
+          WPFunctions::get()->wpDequeueScript($wpScript);
         }
       }
     };
-    add_action('wp_print_scripts', $dequeue_scripts, PHP_INT_MAX);
-    add_action('admin_print_footer_scripts', $dequeue_scripts, PHP_INT_MAX);
-    add_action('admin_footer', $dequeue_scripts, PHP_INT_MAX);
+
+    // execute last in the following hooks
+    $executeLast = PHP_INT_MAX;
+    WPFunctions::get()->addAction('admin_enqueue_scripts', $dequeueScripts, $executeLast);
+    WPFunctions::get()->addAction('admin_footer', $dequeueScripts, $executeLast);
+
+    // execute first in hooks for printing (after printing is too late)
+    $executeFirst = defined('PHP_INT_MIN') ? constant('PHP_INT_MIN') : ~PHP_INT_MAX;
+    WPFunctions::get()->addAction('admin_print_scripts', $dequeueScripts, $executeFirst);
+    WPFunctions::get()->addAction('admin_print_footer_scripts', $dequeueScripts, $executeFirst);
+  }
+
+  public function resolveEditorConflict() {
+
+    // mark editor as already enqueued to prevent loading its assets
+    // when wp_enqueue_editor() used by some other plugin
+    global $wp_actions; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+    $wp_actions['wp_enqueue_editor'] = 1; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+
+    // prevent editor loading when used wp_editor() used by some other plugin
+    WPFunctions::get()->addFilter('wp_editor_settings', function () {
+      ob_start();
+      return [
+        'tinymce' => false,
+        'quicktags' => false,
+      ];
+    });
+
+    WPFunctions::get()->addFilter('the_editor', function () {
+      return '';
+    });
+
+    WPFunctions::get()->addFilter('the_editor_content', function () {
+      ob_end_clean();
+      return '';
+    });
+  }
+
+  public function resolveTinyMceConflict() {
+    // WordPress TinyMCE scripts may not get enqueued as scripts when some plugins use wp_editor()
+    // or wp_enqueue_editor(). Instead, they are printed inside the footer script print actions.
+    // To unload TinyMCE we need to remove those actions.
+    $tinyMceFooterScriptHooks = [
+      '_WP_Editors::enqueue_scripts',
+      '_WP_Editors::editor_js',
+      '_WP_Editors::force_uncompressed_tinymce',
+      '_WP_Editors::print_default_editor_scripts',
+    ];
+
+    $disableWpTinymce = function() use ($tinyMceFooterScriptHooks) {
+      global $wp_filter; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+      $actionName = 'admin_print_footer_scripts';
+      if (!isset($wp_filter[$actionName])) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        return;
+      }
+      foreach ($wp_filter[$actionName]->callbacks as $priority => $callbacks) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+        foreach ($tinyMceFooterScriptHooks as $hook) {
+          if (isset($callbacks[$hook])) {
+            WPFunctions::get()->removeAction($actionName, $callbacks[$hook]['function'], $priority);
+          }
+        }
+      }
+    };
+
+    WPFunctions::get()->addAction('admin_footer', $disableWpTinymce, PHP_INT_MAX);
   }
 }

@@ -2,11 +2,12 @@
 
 namespace MailPoet\Analytics;
 
-use Carbon\Carbon;
-use MailPoet\Models\Setting;
-use MailPoet\WP\Hooks as WPHooks;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\Settings\SettingsController;
+use MailPoet\WP\Functions as WPFunctions;
+use MailPoetVendor\Carbon\Carbon;
 
 class Analytics {
 
@@ -17,68 +18,77 @@ class Analytics {
   /** @var Reporter */
   private $reporter;
 
-  public function __construct(Reporter $reporter) {
+  /** @var SettingsController */
+  private $settings;
+
+  /** @var WPFunctions */
+  private $wp;
+
+  public function __construct(Reporter $reporter, SettingsController $settingsController) {
     $this->reporter = $reporter;
+    $this->settings = $settingsController;
+    $this->wp = new WPFunctions;
   }
 
-  /** @return array */
-  function generateAnalytics() {
-    if($this->shouldSend()) {
-      $data = WPHooks::applyFilters(self::ANALYTICS_FILTER, $this->reporter->getData());
+  /** @return array|null */
+  public function generateAnalytics() {
+    if ($this->shouldSend()) {
+      $data = $this->wp->applyFilters(self::ANALYTICS_FILTER, $this->reporter->getData());
       $this->recordDataSent();
       return $data;
     }
+    return null;
   }
 
-  /** @return boolean */
-  function isEnabled() {
-    $analytics_settings = Setting::getValue('analytics', array());
-    return !empty($analytics_settings['enabled']) === true;
+  /** @return bool */
+  public function isEnabled() {
+    $analyticsSettings = $this->settings->get('analytics', []);
+    return !empty($analyticsSettings['enabled']) === true;
   }
 
-  static function setPublicId($new_public_id) {
-    $current_public_id = Setting::getValue('public_id');
-    if($current_public_id !== $new_public_id) {
-      Setting::setValue('public_id', $new_public_id);
-      Setting::setValue('new_public_id', 'true');
+  public function setPublicId($newPublicId) {
+    $currentPublicId = $this->settings->get('public_id');
+    if ($currentPublicId !== $newPublicId) {
+      $this->settings->set('public_id', $newPublicId);
+      $this->settings->set('new_public_id', 'true');
       // Force user data to be resent
-      Setting::deleteValue(Analytics::SETTINGS_LAST_SENT_KEY);
+      $this->settings->delete(Analytics::SETTINGS_LAST_SENT_KEY);
     }
   }
 
   /** @return string */
-  function getPublicId() {
-    $public_id = Setting::getValue('public_id', '');
+  public function getPublicId() {
+    $publicId = $this->settings->get('public_id', '');
     // if we didn't get the user public_id from the shop yet : we create one based on mixpanel distinct_id
-    if(empty($public_id) && !empty($_COOKIE['mixpanel_distinct_id'])) {
+    if (empty($publicId) && !empty($_COOKIE['mixpanel_distinct_id'])) {
       // the public id has to be diffent that mixpanel_distinct_id in order to be used on different browser
-      $mixpanel_distinct_id = md5($_COOKIE['mixpanel_distinct_id']);
-      Setting::setValue('public_id', $mixpanel_distinct_id);
-      Setting::setValue('new_public_id', 'true');
-      return $mixpanel_distinct_id;
+      $mixpanelDistinctId = md5($_COOKIE['mixpanel_distinct_id']);
+      $this->settings->set('public_id', $mixpanelDistinctId);
+      $this->settings->set('new_public_id', 'true');
+      return $mixpanelDistinctId;
     }
-    return $public_id;
+    return $publicId;
   }
 
   /**
    * Returns true if a the public_id was added and update new_public_id to false
-   * @return boolean
+   * @return bool
    */
-  function isPublicIdNew() {
-    $new_public_id = Setting::getValue('new_public_id');
-    if($new_public_id === 'true') {
-      Setting::setValue('new_public_id', 'false');
+  public function isPublicIdNew() {
+    $newPublicId = $this->settings->get('new_public_id');
+    if ($newPublicId === 'true') {
+      $this->settings->set('new_public_id', 'false');
       return true;
     }
     return false;
   }
 
   private function shouldSend() {
-    if(!$this->isEnabled()) {
+    if (!$this->isEnabled()) {
       return false;
     }
-    $lastSent = Setting::getValue(Analytics::SETTINGS_LAST_SENT_KEY);
-    if(!$lastSent) {
+    $lastSent = $this->settings->get(Analytics::SETTINGS_LAST_SENT_KEY);
+    if (!$lastSent) {
       return true;
     }
     $lastSentCarbon = Carbon::createFromTimestamp(strtotime($lastSent))->addDays(Analytics::SEND_AFTER_DAYS);
@@ -86,7 +96,6 @@ class Analytics {
   }
 
   private function recordDataSent() {
-    Setting::setValue(Analytics::SETTINGS_LAST_SENT_KEY, Carbon::now());
+    $this->settings->set(Analytics::SETTINGS_LAST_SENT_KEY, Carbon::now());
   }
-
 }

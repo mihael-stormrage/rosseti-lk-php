@@ -1,22 +1,32 @@
 <?php
+
 namespace MailPoet\Cron\Workers\KeyCheck;
 
-use MailPoet\Models\Setting;
-use MailPoet\Services\Bridge;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\Services\Bridge;
+use MailPoet\Settings\SettingsController;
 
 class PremiumKeyCheck extends KeyCheckWorker {
   const TASK_TYPE = 'premium_key_check';
 
-  function checkProcessingRequirements() {
+  /** @var SettingsController */
+  private $settings;
+
+  public function __construct(SettingsController $settings) {
+    $this->settings = $settings;
+    parent::__construct();
+  }
+
+  public function checkProcessingRequirements() {
     return Bridge::isPremiumKeySpecified();
   }
 
-  function checkKey() {
-    $premium_key = Setting::getValue(Bridge::PREMIUM_KEY_SETTING_NAME);
-    $result = $this->bridge->checkPremiumKey($premium_key);
-    $this->bridge->storePremiumKeyAndState($premium_key, $result);
+  public function checkKey() {
+    $premiumKey = $this->settings->get(Bridge::PREMIUM_KEY_SETTING_NAME);
+    $result = $this->bridge->checkPremiumKey($premiumKey);
+    $this->bridge->storePremiumKeyAndState($premiumKey, $result);
     return $result;
   }
 }

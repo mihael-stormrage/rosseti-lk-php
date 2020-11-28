@@ -2,90 +2,103 @@
 
 namespace MailPoet\Config;
 
-use MailPoet\WP\Hooks as WPHooks;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
+use WP_Role;
 
 class Capabilities {
   const MEMBERS_CAP_GROUP_NAME = 'mailpoet';
 
   private $renderer = null;
+  /** @var WPFunctions  */
+  private $wp;
+  /** @var AccessControl */
+  private $accessControl;
 
-  function __construct($renderer = null) {
-    if($renderer !== null) {
+  public function __construct($renderer = null, WPFunctions $wp = null) {
+    if ($renderer !== null) {
       $this->renderer = $renderer;
     }
+    if ($wp == null) {
+      $wp = new WPFunctions;
+    }
+    $this->wp = $wp;
+    $this->accessControl = new AccessControl;
   }
 
-  function init() {
+  public function init() {
     $this->setupMembersCapabilities();
   }
 
-  function setupWPCapabilities() {
-    $permissions = AccessControl::getDefaultPermissions();
-    $role_objects = array();
-    foreach($permissions as $name => $roles) {
-      foreach($roles as $role) {
-        if(!isset($role_objects[$role])) {
-          $role_objects[$role] = get_role($role);
+  public function setupWPCapabilities() {
+    $permissions = $this->accessControl->getDefaultPermissions();
+    $roleObjects = [];
+    foreach ($permissions as $name => $roles) {
+      foreach ($roles as $role) {
+        if (!isset($roleObjects[$role])) {
+          $roleObjects[$role] = WPFunctions::get()->getRole($role);
         }
-        if(!is_object($role_objects[$role])) continue;
-        $role_objects[$role]->add_cap($name);
+        if (!$roleObjects[$role] instanceof WP_Role) continue;
+        $roleObjects[$role]->add_cap($name);
       }
     }
   }
 
-  function removeWPCapabilities() {
-    $permissions = AccessControl::getDefaultPermissions();
-    $role_objects = array();
-    foreach($permissions as $name => $roles) {
-      foreach($roles as $role) {
-        if(!isset($role_objects[$role])) {
-          $role_objects[$role] = get_role($role);
+  public function removeWPCapabilities() {
+    $permissions = $this->accessControl->getDefaultPermissions();
+    $roleObjects = [];
+    foreach ($permissions as $name => $roles) {
+      foreach ($roles as $role) {
+        if (!isset($roleObjects[$role])) {
+          $roleObjects[$role] = WPFunctions::get()->getRole($role);
         }
-        if(!is_object($role_objects[$role])) continue;
-        $role_objects[$role]->remove_cap($name);
+        if (!$roleObjects[$role] instanceof WP_Role) continue;
+        $roleObjects[$role]->remove_cap($name);
       }
     }
   }
 
-  function setupMembersCapabilities() {
-    WPHooks::addAction('admin_enqueue_scripts', array($this, 'enqueueMembersStyles'));
-    WPHooks::addAction('members_register_cap_groups', array($this, 'registerMembersCapGroup'));
-    WPHooks::addAction('members_register_caps', array($this, 'registerMembersCapabilities'));
+  public function setupMembersCapabilities() {
+    $this->wp->addAction('admin_enqueue_scripts', [$this, 'enqueueMembersStyles']);
+    $this->wp->addAction('members_register_cap_groups', [$this, 'registerMembersCapGroup']);
+    $this->wp->addAction('members_register_caps', [$this, 'registerMembersCapabilities']);
   }
 
-  function enqueueMembersStyles() {
-    wp_enqueue_style(
+  public function enqueueMembersStyles() {
+    WPFunctions::get()->wpEnqueueStyle(
       'mailpoet-admin-global',
-      Env::$assets_url . '/css/' . $this->renderer->getCssAsset('admin-global.css')
+      Env::$assetsUrl . '/dist/css/' . $this->renderer->getCssAsset('mailpoet-admin.css')
     );
   }
 
-  function registerMembersCapGroup() {
+  public function registerMembersCapGroup() {
     members_register_cap_group(
       self::MEMBERS_CAP_GROUP_NAME,
-      array(
-        'label' => __('MailPoet', 'mailpoet'),
-        'caps' => array(),
+      [
+        'label' => WPFunctions::get()->__('MailPoet', 'mailpoet'),
+        'caps' => [],
         'icon' => 'mailpoet-icon-logo',
-        'priority' => 30
-      )
+        'priority' => 30,
+      ]
     );
   }
 
-  function registerMembersCapabilities() {
-    $permissions = AccessControl::getPermissionLabels();
-    foreach($permissions as $name => $label) {
+  public function registerMembersCapabilities() {
+    $permissions = $this->accessControl->getPermissionLabels();
+    foreach ($permissions as $name => $label) {
       $this->registerMembersCapability($name, $label);
     }
   }
 
-  function registerMembersCapability($name, $label) {
+  public function registerMembersCapability($name, $label) {
     members_register_cap(
       $name,
-      array(
+      [
         'label' => $label,
-        'group' => self::MEMBERS_CAP_GROUP_NAME
-      )
+        'group' => self::MEMBERS_CAP_GROUP_NAME,
+      ]
     );
   }
 }

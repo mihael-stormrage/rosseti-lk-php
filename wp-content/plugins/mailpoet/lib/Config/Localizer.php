@@ -2,49 +2,52 @@
 
 namespace MailPoet\Config;
 
-if(!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
 
 class Localizer {
-  function init() {
+  public function init() {
     $this->loadGlobalText();
     $this->loadPluginText();
   }
 
-  function loadGlobalText() {
-    $language_path = sprintf(
+  public function loadGlobalText() {
+    $languagePath = sprintf(
       '%s/%s-%s.mo',
-      Env::$languages_path,
-      Env::$plugin_name,
+      Env::$languagesPath,
+      Env::$pluginName,
       $this->locale()
     );
-    load_textdomain(Env::$plugin_name, $language_path);
+    WPFunctions::get()->loadTextdomain(Env::$pluginName, $languagePath);
   }
 
-  function loadPluginText() {
-    load_plugin_textdomain(
-      Env::$plugin_name,
+  public function loadPluginText() {
+    WPFunctions::get()->loadPluginTextdomain(
+      Env::$pluginName,
       false,
       dirname(plugin_basename(Env::$file)) . '/lang/'
     );
   }
 
-  function locale() {
-    $locale = apply_filters(
+  public function locale() {
+    $locale = WPFunctions::get()->applyFilters(
       'plugin_locale',
-      get_user_locale(),
-      Env::$plugin_name
+      WPFunctions::get()->getUserLocale(),
+      Env::$pluginName
     );
     return $locale;
   }
 
-  function forceLoadWebsiteLocaleText() {
-    $language_path = sprintf(
+  public function forceLoadWebsiteLocaleText() {
+    $languagePath = sprintf(
       '%s/%s-%s.mo',
-      Env::$languages_path,
-      Env::$plugin_name,
-      get_locale()
+      Env::$languagesPath,
+      Env::$pluginName,
+      WPFunctions::get()->getLocale()
     );
-    unload_textdomain(Env::$plugin_name);
-    load_textdomain(Env::$plugin_name, $language_path);
+    WPFunctions::get()->unloadTextdomain(Env::$pluginName);
+    WPFunctions::get()->loadTextdomain(Env::$pluginName, $languagePath);
   }
 }

@@ -1,92 +1,156 @@
 <?php
+
 namespace MailPoet\Analytics;
 
-use MailPoet\Config\Installer;
+if (!defined('ABSPATH')) exit;
+
+
 use MailPoet\Config\ServicesChecker;
 use MailPoet\Cron\CronTrigger;
-use MailPoet\Models\Newsletter;
-use MailPoet\Models\Segment;
-use MailPoet\Models\Setting;
 use MailPoet\Models\Subscriber;
+use MailPoet\Newsletter\NewslettersRepository;
+use MailPoet\Segments\SegmentsRepository;
 use MailPoet\Settings\Pages;
+use MailPoet\Settings\SettingsController;
 use MailPoet\Subscribers\NewSubscriberNotificationMailer;
+use MailPoet\WooCommerce\Helper as WooCommerceHelper;
+use MailPoet\WP\Functions as WPFunctions;
+use MailPoetVendor\Carbon\Carbon;
 
 class Reporter {
+  /** @var NewslettersRepository */
+  private $newslettersRepository;
 
-  function getData() {
-    global $wpdb, $wp_version;
-    $mta = Setting::getValue('mta', array());
-    $newsletters = Newsletter::getAnalytics();
-    $isCronTriggerMethodWP = Setting::getValue('cron_trigger.method') === CronTrigger::$available_methods['wordpress'];
-    $checker = new ServicesChecker();
-    $bounceAddress = Setting::getValue('bounce.address');
-    $segments = Segment::getAnalytics();
-    $has_wc = class_exists('WooCommerce');
-    $wc_customers_count = 0;
-    if($has_wc) {
-      $wc_customers_count = (int)Newsletter::rawQuery(
-        "SELECT COUNT(DISTINCT m.meta_value) as count FROM ".$wpdb->prefix."posts p ".
-        "JOIN ".$wpdb->prefix."postmeta m ON m.post_id = p.id ".
-        "WHERE p.post_type = 'shop_order' ".
-        "AND m.meta_key = '_customer_user' AND m.meta_value <> 0"
-      )->findOne()->count;
-    }
+  /** @var SegmentsRepository */
+  private $segmentsRepository;
 
-    return array(
+  /** @var ServicesChecker */
+  private $servicesChecker;
+
+  /** @var SettingsController */
+  private $settings;
+
+  /** @var WooCommerceHelper */
+  private $woocommerceHelper;
+
+  /** @var WPFunctions */
+  private $wp;
+
+  public function __construct(
+    NewslettersRepository $newslettersRepository,
+    SegmentsRepository $segmentsRepository,
+    ServicesChecker $servicesChecker,
+    SettingsController $settings,
+    WooCommerceHelper $woocommerceHelper,
+    WPFunctions $wp
+  ) {
+    $this->newslettersRepository = $newslettersRepository;
+    $this->segmentsRepository = $segmentsRepository;
+    $this->servicesChecker = $servicesChecker;
+    $this->settings = $settings;
+    $this->woocommerceHelper = $woocommerceHelper;
+    $this->wp = $wp;
+  }
+
+  public function getData() {
+    global $wpdb, $wp_version, $woocommerce;  // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+    $mta = $this->settings->get('mta', []);
+    $newsletters = $this->newslettersRepository->getAnalytics();
+    $isCronTriggerMethodWP = $this->settings->get('cron_trigger.method') === CronTrigger::METHOD_WORDPRESS;
+    $bounceAddress = $this->settings->get('bounce.address');
+    $segments = $this->segmentsRepository->getCountsPerType();
+    $hasWc = $this->woocommerceHelper->isWooCommerceActive();
+    $inactiveSubscribersMonths = (int)round((int)$this->settings->get('deactivate_subscriber_after_inactive_days') / 30);
+    $inactiveSubscribersStatus = $inactiveSubscribersMonths === 0 ? 'never' : "$inactiveSubscribersMonths months";
+
+    $result = [
       'PHP version' => PHP_VERSION,
       'MySQL version' => $wpdb->db_version(),
-      'WordPress version' => $wp_version,
-      'Multisite environment' => is_multisite() ? 'yes' : 'no',
-      'RTL' => is_rtl() ? 'yes' : 'no',
+      'WordPress version' => $wp_version, // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
+      'Multisite environment' => $this->wp->isMultisite() ? 'yes' : 'no',
+      'RTL' => $this->wp->isRtl() ? 'yes' : 'no',
       'WP_MEMORY_LIMIT' => WP_MEMORY_LIMIT,
       'WP_MAX_MEMORY_LIMIT' => WP_MAX_MEMORY_LIMIT,
       'PHP memory_limit' => ini_get('memory_limit'),
       'PHP max_execution_time' => ini_get('max_execution_time'),
-      'users_can_register' => get_option('users_can_register') ? 'yes' : 'no',
+      'users_can_register' => $this->wp->getOption('users_can_register') ? 'yes' : 'no',
       'MailPoet Free version' => MAILPOET_VERSION,
       'MailPoet Premium version' => (defined('MAILPOET_PREMIUM_VERSION')) ? MAILPOET_PREMIUM_VERSION : 'N/A',
-      'Total number of subscribers' =>  Subscriber::getTotalSubscribers(),
+      'Total number of subscribers' => Subscriber::getTotalSubscribers(),
       'Sending Method' => isset($mta['method']) ? $mta['method'] : null,
-      'Date of plugin installation' => Setting::getValue('installed_at'),
-      'Subscribe in comments' => (boolean)Setting::getValue('subscribe.on_comment.enabled', false),
-      'Subscribe in registration form' => (boolean)Setting::getValue('subscribe.on_register.enabled', false),
-      'Manage Subscription page > MailPoet page' => (boolean)Pages::isMailpoetPage(intval(Setting::getValue('subscription.pages.manage'))),
-      'Unsubscribe page > MailPoet page' => (boolean)Pages::isMailpoetPage(intval(Setting::getValue('subscription.pages.unsubscribe'))),
-      'Sign-up confirmation' => (boolean)Setting::getValue('signup_confirmation.enabled', false),
-      'Sign-up confirmation: Confirmation page > MailPoet page' => (boolean)Pages::isMailpoetPage(intval(Setting::getValue('subscription.pages.confirmation'))),
+      'Date of plugin installation' => $this->settings->get('installed_at'),
+      'Subscribe in comments' => (boolean)$this->settings->get('subscribe.on_comment.enabled', false),
+      'Subscribe in registration form' => (boolean)$this->settings->get('subscribe.on_register.enabled', false),
+      'Manage Subscription page > MailPoet page' => (boolean)Pages::isMailpoetPage(intval($this->settings->get('subscription.pages.manage'))),
+      'Unsubscribe page > MailPoet page' => (boolean)Pages::isMailpoetPage(intval($this->settings->get('subscription.pages.unsubscribe'))),
+      'Sign-up confirmation' => (boolean)$this->settings->get('signup_confirmation.enabled', false),
+      'Sign-up confirmation: Confirmation page > MailPoet page' => (boolean)Pages::isMailpoetPage(intval($this->settings->get('subscription.pages.confirmation'))),
       'Bounce email address' => !empty($bounceAddress),
       'Newsletter task scheduler (cron)' => $isCronTriggerMethodWP ? 'visitors' : 'script',
-      'Open and click tracking' => (boolean)Setting::getValue('tracking.enabled', false),
-      'Premium key valid' => $checker->isPremiumKeyValid(),
-      'New subscriber notifications' => NewSubscriberNotificationMailer::isDisabled(Setting::getValue(NewSubscriberNotificationMailer::SETTINGS_KEY)),
+      'Open and click tracking' => (boolean)$this->settings->get('tracking.enabled', false),
+      'Premium key valid' => $this->servicesChecker->isPremiumKeyValid(),
+      'New subscriber notifications' => NewSubscriberNotificationMailer::isDisabled($this->settings->get(NewSubscriberNotificationMailer::SETTINGS_KEY)),
       'Number of standard newsletters sent in last 3 months' => $newsletters['sent_newsletters_3_months'],
       'Number of standard newsletters sent in last 30 days' => $newsletters['sent_newsletters_30_days'],
       'Number of active post notifications' => $newsletters['notifications_count'],
       'Number of active welcome emails' => $newsletters['welcome_newsletters_count'],
+      'Total number of standard newsletters sent' => $newsletters['sent_newsletters_count'],
       'Number of segments' => isset($segments['dynamic']) ? (int)$segments['dynamic'] : 0,
       'Number of lists' => isset($segments['default']) ? (int)$segments['default'] : 0,
-      'Plugin > MailPoet Premium' => is_plugin_active('mailpoet-premium/mailpoet-premium.php'),
-      'Plugin > bounce add-on' => is_plugin_active('mailpoet-bounce-handler/mailpoet-bounce-handler.php'),
-      'Plugin > Bloom' => is_plugin_active('bloom-for-publishers/bloom.php'),
-      'Plugin > WP Holler' => is_plugin_active('holler-box/holler-box.php'),
-      'Plugin > WP-SMTP' => is_plugin_active('wp-mail-smtp/wp_mail_smtp.php'),
-      'Plugin > WooCommerce' => $has_wc,
-      'Plugin > WooCommerce Subscription' => is_plugin_active('woocommerce-subscriptions/woocommerce-subscriptions.php'),
-      'Plugin > WooCommerce Follow Up Emails' => is_plugin_active('woocommerce-follow-up-emails/woocommerce-follow-up-emails.php'),
-      'Plugin > WooCommerce Email Customizer' => is_plugin_active('woocommerce-email-customizer/woocommerce-email-customizer.php'),
-      'Plugin > WooCommerce Memberships' => is_plugin_active('woocommerce-memberships/woocommerce-memberships.php'),
-      'Plugin > WooCommerce MailChimp' => is_plugin_active('woocommerce-mailchimp/woocommerce-mailchimp.php'),
-      'Plugin > MailChimp for WooCommerce' => is_plugin_active('mailchimp-for-woocommerce/mailchimp-woocommerce.php'),
-      'Plugin > The Event Calendar' => is_plugin_active('the-events-calendar/the-events-calendar.php'),
-      'Plugin > Gravity Forms' => is_plugin_active('gravityforms/gravityforms.php'),
-      'Plugin > Ninja Forms' => is_plugin_active('ninja-forms/ninja-forms.php'),
-      'Plugin > WPForms' => is_plugin_active('wpforms-lite/wpforms.php'),
-      'Plugin > Formidable Forms' => is_plugin_active('formidable/formidable.php'),
-      'Plugin > Contact Form 7' => is_plugin_active('contact-form-7/wp-contact-form-7.php'),
-      'Plugin > Easy Digital Downloads' => is_plugin_active('easy-digital-downloads/easy-digital-downloads.php'),
-      'Web host' => Setting::getValue('mta_group') == 'website' ? Setting::getValue('web_host') : null,
-      'Number of WooCommerce subscribers' => $wc_customers_count,
-    );
+      'Stop sending to inactive subscribers' => $inactiveSubscribersStatus,
+      'Plugin > MailPoet Premium' => $this->wp->isPluginActive('mailpoet-premium/mailpoet-premium.php'),
+      'Plugin > bounce add-on' => $this->wp->isPluginActive('mailpoet-bounce-handler/mailpoet-bounce-handler.php'),
+      'Plugin > Bloom' => $this->wp->isPluginActive('bloom-for-publishers/bloom.php'),
+      'Plugin > WP Holler' => $this->wp->isPluginActive('holler-box/holler-box.php'),
+      'Plugin > WP-SMTP' => $this->wp->isPluginActive('wp-mail-smtp/wp_mail_smtp.php'),
+      'Plugin > WooCommerce' => $hasWc,
+      'Plugin > WooCommerce Subscription' => $this->wp->isPluginActive('woocommerce-subscriptions/woocommerce-subscriptions.php'),
+      'Plugin > WooCommerce Follow Up Emails' => $this->wp->isPluginActive('woocommerce-follow-up-emails/woocommerce-follow-up-emails.php'),
+      'Plugin > WooCommerce Email Customizer' => $this->wp->isPluginActive('woocommerce-email-customizer/woocommerce-email-customizer.php'),
+      'Plugin > WooCommerce Memberships' => $this->wp->isPluginActive('woocommerce-memberships/woocommerce-memberships.php'),
+      'Plugin > WooCommerce MailChimp' => $this->wp->isPluginActive('woocommerce-mailchimp/woocommerce-mailchimp.php'),
+      'Plugin > MailChimp for WooCommerce' => $this->wp->isPluginActive('mailchimp-for-woocommerce/mailchimp-woocommerce.php'),
+      'Plugin > The Event Calendar' => $this->wp->isPluginActive('the-events-calendar/the-events-calendar.php'),
+      'Plugin > Gravity Forms' => $this->wp->isPluginActive('gravityforms/gravityforms.php'),
+      'Plugin > Ninja Forms' => $this->wp->isPluginActive('ninja-forms/ninja-forms.php'),
+      'Plugin > WPForms' => $this->wp->isPluginActive('wpforms-lite/wpforms.php'),
+      'Plugin > Formidable Forms' => $this->wp->isPluginActive('formidable/formidable.php'),
+      'Plugin > Contact Form 7' => $this->wp->isPluginActive('contact-form-7/wp-contact-form-7.php'),
+      'Plugin > Easy Digital Downloads' => $this->wp->isPluginActive('easy-digital-downloads/easy-digital-downloads.php'),
+      'Plugin > WooCommerce Multi-Currency' => $this->wp->isPluginActive('woocommerce-multi-currency/woocommerce-multi-currency.php'),
+      'Plugin > Multi Currency for WooCommerce' => $this->wp->isPluginActive('woo-multi-currency/woo-multi-currency.php'),
+      'Web host' => $this->settings->get('mta_group') == 'website' ? $this->settings->get('web_host') : null,
+    ];
+    if ($hasWc) {
+      $result['WooCommerce version'] = $woocommerce->version;
+      $result['Number of WooCommerce subscribers'] = isset($segments['woocommerce_users']) ? (int)$segments['woocommerce_users'] : 0;
+      $result['WooCommerce: opt-in on checkout is active'] = $this->settings->get('woocommerce.optin_on_checkout.enabled') ?: false;
+      $result['WooCommerce: set old customers as subscribed'] = $this->settings->get('mailpoet_subscribe_old_woocommerce_customers.enabled') ?: false;
+      $result['WooCommerce email customizer is active'] = $this->settings->get('woocommerce.use_mailpoet_editor') ?: false;
+
+      $result['Number of active WooCommerce first purchase emails'] = $newsletters['first_purchase_emails_count'];
+      $result['Number of active WooCommerce purchased this product emails'] = $newsletters['product_purchased_emails_count'];
+      $result['Number of active purchased in this category'] = $newsletters['product_purchased_in_category_emails_count'];
+      $result['Number of active abandoned cart'] = $newsletters['abandoned_cart_emails_count'];
+    }
+    return $result;
   }
 
+  public function getTrackingData() {
+    $newsletters = $this->newslettersRepository->getAnalytics();
+    $segments = $this->segmentsRepository->getCountsPerType();
+    $mta = $this->settings->get('mta', []);
+    $installedAt = new Carbon($this->settings->get('installed_at'));
+    return [
+      'installedAtIso' => $installedAt->format(Carbon::ISO8601),
+      'newslettersSent' => $newsletters['sent_newsletters_count'],
+      'welcomeEmails' => $newsletters['welcome_newsletters_count'],
+      'postnotificationEmails' => $newsletters['notifications_count'],
+      'woocommerceEmails' => $newsletters['automatic_emails_count'],
+      'subscribers' => Subscriber::getTotalSubscribers(),
+      'lists' => isset($segments['default']) ? (int)$segments['default'] : 0,
+      'sendingMethod' => isset($mta['method']) ? $mta['method'] : null,
+      'woocommerceIsInstalled' => $this->woocommerceHelper->isWooCommerceActive(),
+    ];
+  }
 }

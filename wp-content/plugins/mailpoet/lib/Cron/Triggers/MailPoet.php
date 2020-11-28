@@ -1,13 +1,22 @@
 <?php
+
 namespace MailPoet\Cron\Triggers;
+
+if (!defined('ABSPATH')) exit;
+
 
 use MailPoet\Cron\Supervisor;
 
-if(!defined('ABSPATH')) exit;
-
 class MailPoet {
-  static function run() {
-    $supervisor = new Supervisor();
-    return $supervisor->checkDaemon();
+  /** @var Supervisor */
+  private $supervisor;
+
+  public function __construct(Supervisor $supervisor) {
+    $this->supervisor = $supervisor;
+  }
+
+  public function run() {
+    $this->supervisor->init();
+    return $this->supervisor->checkDaemon();
   }
 }

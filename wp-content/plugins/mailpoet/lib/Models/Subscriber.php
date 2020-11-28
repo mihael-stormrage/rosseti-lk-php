@@ -1,178 +1,128 @@
 <?php
+
 namespace MailPoet\Models;
 
-use MailPoet\Newsletter\Scheduler\Scheduler;
-use MailPoet\Subscribers\ConfirmationEmailMailer;
-use MailPoet\Subscribers\NewSubscriberNotificationMailer;
-use MailPoet\Subscribers\Source;
-use MailPoet\Util\Helpers;
-use function MailPoet\Util\array_column;
+if (!defined('ABSPATH')) exit;
 
-if(!defined('ABSPATH')) exit;
+
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\Settings\SettingsController;
+use MailPoet\Util\Helpers;
+use MailPoet\Util\Security;
+use MailPoet\WP\Functions as WPFunctions;
+
+/**
+ * @property int $id
+ * @property string $email
+ * @property string $firstName
+ * @property string $lastName
+ * @property string $status
+ * @property string|null $subscribedIp
+ * @property string|null $confirmedIp
+ * @property string|null $confirmedAt
+ * @property string|null $lastSubscribedAt
+ * @property string|null $deletedAt
+ * @property string|null $source
+ * @property string|null $linkToken
+ * @property int $countConfirmations
+ * @property int $wpUserId
+ * @property array $segments
+ * @property array $subscriptions
+ * @property string|null $unconfirmedData
+ * @property int $isWoocommerceUser
+ */
 
 class Subscriber extends Model {
-  public static $_table = MP_SUBSCRIBERS_TABLE;
+  public static $_table = MP_SUBSCRIBERS_TABLE; // phpcs:ignore PSR2.Classes.PropertyDeclaration
 
   const STATUS_SUBSCRIBED = 'subscribed';
   const STATUS_UNSUBSCRIBED = 'unsubscribed';
   const STATUS_UNCONFIRMED = 'unconfirmed';
   const STATUS_BOUNCED = 'bounced';
-  const SUBSCRIBER_TOKEN_LENGTH = 6;
+  const STATUS_INACTIVE = 'inactive';
 
-  function __construct() {
+  const OBSOLETE_LINK_TOKEN_LENGTH = 6;
+  const LINK_TOKEN_LENGTH = 32;
+
+  /** @var string|bool */
+  public $token;
+
+  public function __construct() {
     parent::__construct();
 
-    $this->addValidations('email', array(
-      'required' => __('Please enter your email address', 'mailpoet'),
-      'validEmail' => __('Your email address is invalid!', 'mailpoet')
-    ));
+    $this->addValidations('email', [
+      'required' => WPFunctions::get()->__('Please enter your email address', 'mailpoet'),
+      'validEmail' => WPFunctions::get()->__('Your email address is invalid!', 'mailpoet'),
+    ]);
   }
 
-  static function findOne($id = false) {
-    if(is_int($id) || (string)(int)$id === $id) {
+  public static function findOne($id = false) {
+    if (is_int($id) || (string)(int)$id === $id) {
       return parent::findOne($id);
-    } else if(strlen(trim($id)) > 0) {
+    } else if (strlen(trim($id)) > 0) {
       return parent::where('email', $id)->findOne();
     }
     return false;
   }
 
-  function segments() {
+  public function segments() {
     return $this->has_many_through(
-      __NAMESPACE__.'\Segment',
-      __NAMESPACE__.'\SubscriberSegment',
+      __NAMESPACE__ . '\Segment',
+      __NAMESPACE__ . '\SubscriberSegment',
       'subscriber_id',
       'segment_id'
     )
-    ->where(MP_SUBSCRIBER_SEGMENT_TABLE.'.status', self::STATUS_SUBSCRIBED);
+    ->where(MP_SUBSCRIBER_SEGMENT_TABLE . '.status', self::STATUS_SUBSCRIBED);
   }
 
-  function save() {
+  public function save() {
     // convert email to lowercase format
     $this->email = strtolower($this->email);
     return parent::save();
   }
 
-  function delete() {
+  public function delete() {
     // WP Users cannot be deleted
-    if($this->isWPUser()) {
-      return false;
-    } else {
+    if (!$this->isWPUser() && !$this->isWooCommerceUser()) {
       // delete all relations to segments
       SubscriberSegment::deleteSubscriptions($this);
       // delete all relations to custom fields
       SubscriberCustomField::deleteSubscriberRelations($this);
       return parent::delete();
     }
+    return null;
   }
 
-  function trash() {
+  public function trash() {
     // WP Users cannot be trashed
-    if($this->isWPUser()) {
+    if ($this->isWPUser() || $this->isWooCommerceUser()) {
       return false;
     } else {
       return parent::trash();
     }
   }
 
-  function isWPUser() {
-    return ($this->wp_user_id !== null);
+  public function isWPUser() {
+    return (bool)$this->wpUserId;
   }
 
-  static function getCurrentWPUser() {
-    $wp_user = wp_get_current_user();
-    return self::where('wp_user_id', $wp_user->ID)->findOne();
+  public function isWooCommerceUser() {
+    return (bool)$this->isWoocommerceUser;
   }
 
-  static function generateToken($email = null) {
-    if($email !== null) {
-      $auth_key = '';
-      if(defined('AUTH_KEY')) {
-        $auth_key = AUTH_KEY;
-      }
-      return substr(md5($auth_key . $email), 0, self::SUBSCRIBER_TOKEN_LENGTH);
+  public static function getCurrentWPUser() {
+    $wpUser = WPFunctions::get()->wpGetCurrentUser();
+    if (empty($wpUser->ID)) {
+      return false; // Don't look up a subscriber for guests
     }
-    return false;
+    return self::where('wp_user_id', $wpUser->ID)->findOne();
   }
 
-  static function verifyToken($email, $token) {
-    return call_user_func(
-      'hash_equals',
-      self::generateToken($email),
-      substr($token, 0, self::SUBSCRIBER_TOKEN_LENGTH)
-    );
-  }
-
-  static function subscribe($subscriber_data = array(), $segment_ids = array()) {
-    // filter out keys from the subscriber_data array
-    // that should not be editable when subscribing
-    $subscriber_data = self::filterOutReservedColumns($subscriber_data);
-
-    $signup_confirmation_enabled = (bool)Setting::getValue(
-      'signup_confirmation.enabled'
-    );
-
-    $subscriber_data['subscribed_ip'] = Helpers::getIP();
-
-    $subscriber = self::findOne($subscriber_data['email']);
-
-    if($subscriber === false || !$signup_confirmation_enabled) {
-      // create new subscriber or update if no confirmation is required
-      $subscriber = self::createOrUpdate($subscriber_data);
-      if($subscriber->getErrors() !== false) {
-        $subscriber = Source::setSource($subscriber, Source::FORM);
-        $subscriber->save();
-        return $subscriber;
-      }
-
-      $subscriber = self::findOne($subscriber->id);
-    } else {
-      // store subscriber data to be updated after confirmation
-      $subscriber->setUnconfirmedData($subscriber_data);
-      $subscriber->setExpr('updated_at', 'NOW()');
-    }
-
-    // restore trashed subscriber
-    if($subscriber->deleted_at !== null) {
-      $subscriber->setExpr('deleted_at', 'NULL');
-    }
-
-    // set status depending on signup confirmation setting
-    if($subscriber->status !== self::STATUS_SUBSCRIBED) {
-      if($signup_confirmation_enabled === true) {
-        $subscriber->set('status', self::STATUS_UNCONFIRMED);
-      } else {
-        $subscriber->set('status', self::STATUS_SUBSCRIBED);
-      }
-    }
-
-    $subscriber = Source::setSource($subscriber, Source::FORM);
-
-    if($subscriber->save()) {
-      // link subscriber to segments
-      SubscriberSegment::subscribeToSegments($subscriber, $segment_ids);
-
-      $sender = new ConfirmationEmailMailer();
-      $sender->sendConfirmationEmail($subscriber);
-
-      if($subscriber->status === self::STATUS_SUBSCRIBED) {
-        $sender = new NewSubscriberNotificationMailer();
-        $sender->send($subscriber, Segment::whereIn('id', $segment_ids)->findMany());
-
-        Scheduler::scheduleSubscriberWelcomeNotification(
-          $subscriber->id,
-          $segment_ids
-        );
-      }
-    }
-
-    return $subscriber;
-  }
-
-  static function filterOutReservedColumns(array $subscriber_data) {
-    $reserved_columns = array(
+  public static function filterOutReservedColumns(array $subscriberData) {
+    $reservedColumns = [
       'id',
       'wp_user_id',
+      'is_woocommerce_user',
       'status',
       'subscribed_ip',
       'confirmed_ip',
@@ -180,87 +130,90 @@ class Subscriber extends Model {
       'created_at',
       'updated_at',
       'deleted_at',
-      'unconfirmed_data'
+      'unconfirmed_data',
+    ];
+    $subscriberData = array_diff_key(
+      $subscriberData,
+      array_flip($reservedColumns)
     );
-    $subscriber_data = array_diff_key(
-      $subscriber_data,
-      array_flip($reserved_columns)
-    );
-    return $subscriber_data;
+    return $subscriberData;
   }
 
-  static function search($orm, $search = '') {
-    if(strlen(trim($search) === 0)) {
+  public static function search($orm, $search = '') {
+    if (strlen(trim($search)) === 0) {
       return $orm;
     }
 
     return $orm->where_raw(
       '(`email` LIKE ? OR `first_name` LIKE ? OR `last_name` LIKE ?)',
-      array('%'.$search.'%', '%'.$search.'%', '%'.$search.'%')
+      ['%' . $search . '%', '%' . $search . '%', '%' . $search . '%']
     );
   }
 
-  static function filters($data = array()) {
+  public static function filters($data = []) {
     $group = (!empty($data['group'])) ? $data['group'] : 'all';
 
     $segments = Segment::orderByAsc('name')
       ->whereNull('deleted_at')
-      ->whereIn('type', array(Segment::TYPE_WP_USERS, Segment::TYPE_DEFAULT))
+      ->whereIn('type', Segment::getSegmentTypes())
       ->findMany();
-    $segment_list = array();
-    $segment_list[] = array(
-      'label' => __('All Lists', 'mailpoet'),
-      'value' => ''
-    );
+    $segmentList = [];
+    $segmentList[] = [
+      'label' => WPFunctions::get()->__('All Lists', 'mailpoet'),
+      'value' => '',
+    ];
 
-    $subscribers_without_segment = self::filter('withoutSegments')
+    $subscribersWithoutSegment = self::filter('withoutSegments')
       ->whereNull('deleted_at')
       ->count();
-    $subscribers_without_segment_label = sprintf(
-      __('Subscribers without a list (%s)', 'mailpoet'),
-      number_format($subscribers_without_segment)
+    $subscribersWithoutSegmentLabel = sprintf(
+      WPFunctions::get()->__('Subscribers without a list (%s)', 'mailpoet'),
+      number_format($subscribersWithoutSegment)
     );
 
-    $segment_list[] = array(
-      'label' => $subscribers_without_segment_label,
-      'value' => 'none'
-    );
+    $segmentList[] = [
+      'label' => $subscribersWithoutSegmentLabel,
+      'value' => 'none',
+    ];
 
-    foreach($segments as $segment) {
-      $subscribers_count = $segment->subscribers()
-        ->filter('groupBy', $group)
-        ->count();
+    foreach ($segments as $segment) {
+      $subscribersCount = 0;
+      $subscribers = $segment->subscribers()
+        ->filter('groupBy', $group);
+      if ($subscribers) {
+        $subscribersCount = $subscribers->count();
+      }
 
       $label = sprintf(
         '%s (%s)',
         $segment->name,
-        number_format($subscribers_count)
+        number_format($subscribersCount)
       );
 
-      $segment_list[] = array(
+      $segmentList[] = [
         'label' => $label,
-        'value' => $segment->id()
-      );
+        'value' => $segment->id(),
+      ];
     }
 
-    $filters = array(
-      'segment' => $segment_list
-    );
+    $filters = [
+      'segment' => $segmentList,
+    ];
 
     return $filters;
   }
 
-  static function filterBy($orm, $filters = null) {
-    if(empty($filters)) {
+  public static function filterBy($orm, $filters = null) {
+    if (empty($filters)) {
       return $orm;
     }
-    foreach($filters as $key => $value) {
-      if($key === 'segment') {
-        if($value === 'none') {
+    foreach ($filters as $key => $value) {
+      if ($key === 'segment') {
+        if ($value === 'none') {
           return self::filter('withoutSegments');
         } else {
           $segment = Segment::findOne($value);
-          if($segment !== false) {
+          if ($segment instanceof Segment) {
             return $segment->subscribers();
           }
         }
@@ -269,112 +222,77 @@ class Subscriber extends Model {
     return $orm;
   }
 
-  static function groups() {
-    return array(
-      array(
-        'name' => 'all',
-        'label' => __('All', 'mailpoet'),
-        'count' => self::getPublished()->count()
-      ),
-      array(
-        'name' => self::STATUS_SUBSCRIBED,
-        'label' => __('Subscribed', 'mailpoet'),
-        'count' => self::filter(self::STATUS_SUBSCRIBED)->count()
-      ),
-      array(
-        'name' => self::STATUS_UNCONFIRMED,
-        'label' => __('Unconfirmed', 'mailpoet'),
-        'count' => self::filter(self::STATUS_UNCONFIRMED)->count()
-      ),
-      array(
-        'name' => self::STATUS_UNSUBSCRIBED,
-        'label' => __('Unsubscribed', 'mailpoet'),
-        'count' => self::filter(self::STATUS_UNSUBSCRIBED)->count()
-      ),
-      array(
-        'name' => self::STATUS_BOUNCED,
-        'label' => __('Bounced', 'mailpoet'),
-        'count' => self::filter(self::STATUS_BOUNCED)->count()
-      ),
-      array(
-        'name' => 'trash',
-        'label' => __('Trash', 'mailpoet'),
-        'count' => self::getTrashed()->count()
-      )
-    );
-  }
-
-  static function groupBy($orm, $group = null) {
-    if($group === 'trash') {
+  public static function groupBy($orm, $group = null) {
+    if ($group === 'trash') {
       return $orm->whereNotNull('deleted_at');
-    } else if($group === 'all') {
+    } else if ($group === 'all') {
       return $orm->whereNull('deleted_at');
     } else {
       return $orm->filter($group);
     }
   }
 
-  static function filterWithCustomFields($orm) {
-    $orm = $orm->select(MP_SUBSCRIBERS_TABLE.'.*');
+  public static function filterWithCustomFields($orm) {
+    $orm = $orm->select(MP_SUBSCRIBERS_TABLE . '.*');
     $customFields = CustomField::findArray();
-    foreach($customFields as $customField) {
+    foreach ($customFields as $customField) {
       $orm = $orm->select_expr(
         'IFNULL(GROUP_CONCAT(CASE WHEN ' .
         MP_CUSTOM_FIELDS_TABLE . '.id=' . $customField['id'] . ' THEN ' .
-        MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.value END), NULL) as "' . $customField['name'].'"');
+        MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.value END), NULL) as "' . $customField['name'] . '"');
     }
     $orm = $orm
       ->leftOuterJoin(
         MP_SUBSCRIBER_CUSTOM_FIELD_TABLE,
-        array(
-          MP_SUBSCRIBERS_TABLE.'.id',
+        [
+          MP_SUBSCRIBERS_TABLE . '.id',
           '=',
-          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE.'.subscriber_id'
-        )
+          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.subscriber_id',
+        ]
       )
       ->leftOuterJoin(
         MP_CUSTOM_FIELDS_TABLE,
-        array(
-          MP_CUSTOM_FIELDS_TABLE.'.id',
+        [
+          MP_CUSTOM_FIELDS_TABLE . '.id',
           '=',
-          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE.'.custom_field_id'
-        )
+          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.custom_field_id',
+        ]
       )
-      ->groupBy(MP_SUBSCRIBERS_TABLE.'.id');
+      ->groupBy(MP_SUBSCRIBERS_TABLE . '.id');
     return $orm;
   }
 
-  static function filterWithCustomFieldsForExport($orm) {
-    $orm = $orm->select(MP_SUBSCRIBERS_TABLE.'.*');
+  public static function filterWithCustomFieldsForExport($orm) {
+    $orm = $orm->select(MP_SUBSCRIBERS_TABLE . '.*');
     $customFields = CustomField::findArray();
-    foreach($customFields as $customField) {
+    foreach ($customFields as $customField) {
       $orm = $orm->selectExpr(
         'MAX(CASE WHEN ' .
         MP_CUSTOM_FIELDS_TABLE . '.id=' . $customField['id'] . ' THEN ' .
-        MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.value END) as "' . $customField['id'].'"'
+        MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.value END) as "' . $customField['id'] . '"'
       );
     }
     $orm = $orm
       ->leftOuterJoin(
         MP_SUBSCRIBER_CUSTOM_FIELD_TABLE,
-        array(
-          MP_SUBSCRIBERS_TABLE.'.id', '=',
-          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE.'.subscriber_id'
-        )
+        [
+          MP_SUBSCRIBERS_TABLE . '.id', '=',
+          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.subscriber_id',
+        ]
       )
       ->leftOuterJoin(
         MP_CUSTOM_FIELDS_TABLE,
-        array(
-          MP_CUSTOM_FIELDS_TABLE.'.id','=',
-          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE.'.custom_field_id'
-        )
+        [
+          MP_CUSTOM_FIELDS_TABLE . '.id','=',
+          MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.custom_field_id',
+        ]
       );
     return $orm;
   }
 
-  static function getSubscribedInSegments($segment_ids) {
-    $subscribers = SubscriberSegment::table_alias('relation')
-      ->whereIn('relation.segment_id', $segment_ids)
+  public static function getSubscribedInSegments($segmentIds) {
+    $subscribers = SubscriberSegment::tableAlias('relation')
+      ->whereIn('relation.segment_id', $segmentIds)
       ->where('relation.status', 'subscribed')
       ->join(
         MP_SUBSCRIBERS_TABLE,
@@ -388,339 +306,256 @@ class Subscriber extends Model {
     return $subscribers;
   }
 
-  function customFields() {
-    return $this->hasManyThrough(
-      __NAMESPACE__.'\CustomField',
-      __NAMESPACE__.'\SubscriberCustomField',
-      'subscriber_id',
-      'custom_field_id'
-    )->select_expr(MP_SUBSCRIBER_CUSTOM_FIELD_TABLE.'.value');
+  /**
+   * @param string $customerEmail
+   * @return bool|Subscriber
+   */
+  public static function getWooCommerceSegmentSubscriber($customerEmail) {
+    $wcSegment = Segment::getWooCommerceSegment();
+    return Subscriber::tableAlias('subscribers')
+      ->select('subscribers.*')
+      ->where('subscribers.email', $customerEmail)
+      ->join(
+        MP_SUBSCRIBER_SEGMENT_TABLE,
+        'relation.subscriber_id = subscribers.id',
+        'relation'
+      )
+      ->where('relation.segment_id', $wcSegment->id)
+      ->where('relation.status', Subscriber::STATUS_SUBSCRIBED)
+      ->whereIn('subscribers.status', [Subscriber::STATUS_SUBSCRIBED, Subscriber::STATUS_UNCONFIRMED])
+      ->where('subscribers.is_woocommerce_user', 1)
+      ->findOne();
   }
 
-  static function createOrUpdate($data = array()) {
+  public function customFields() {
+    return $this->hasManyThrough(
+      __NAMESPACE__ . '\CustomField',
+      __NAMESPACE__ . '\SubscriberCustomField',
+      'subscriber_id',
+      'custom_field_id'
+    )->select_expr(MP_SUBSCRIBER_CUSTOM_FIELD_TABLE . '.value');
+  }
+
+  public static function createOrUpdate($data = []) {
     $subscriber = false;
-    if(is_array($data) && !empty($data)) {
-      $data = stripslashes_deep($data);
+    if (is_array($data) && !empty($data)) {
+      $data = WPFunctions::get()->stripslashesDeep($data);
     }
 
-    if(isset($data['id']) && (int)$data['id'] > 0) {
+    if (isset($data['id']) && (int)$data['id'] > 0) {
       $subscriber = self::findOne((int)$data['id']);
       unset($data['id']);
     }
 
-    if($subscriber === false && !empty($data['email'])) {
+    if ($subscriber === false && !empty($data['email'])) {
       $subscriber = self::where('email', $data['email'])->findOne();
-      if($subscriber !== false) {
+      if ($subscriber !== false) {
         unset($data['email']);
       }
     }
 
     // segments
-    $segment_ids = false;
-    if(array_key_exists('segments', $data)) {
-      $segment_ids = (array)$data['segments'];
+    $segmentIds = false;
+    if (array_key_exists('segments', $data)) {
+      $segmentIds = (array)$data['segments'];
       unset($data['segments']);
     }
 
     // if new subscriber, make sure that required fields are set
-    if(!$subscriber) {
+    if (!$subscriber) {
       $data = self::setRequiredFieldsDefaultValues($data);
     }
 
     // get custom fields
-    list($data, $custom_fields) = self::extractCustomFieldsFromFromObject($data);
+    list($data, $customFields) = self::extractCustomFieldsFromFromObject($data);
 
     // wipe any unconfirmed data at this point
     $data['unconfirmed_data'] = null;
 
-    $old_status = false;
-    $new_status = false;
+    $oldStatus = false;
+    $newStatus = false;
 
-    if($subscriber === false) {
+    if ($subscriber === false) {
       $subscriber = self::create();
       $subscriber->hydrate($data);
     } else {
-      $old_status = $subscriber->status;
+      $oldStatus = $subscriber->status;
       $subscriber->set($data);
-      $new_status = $subscriber->status;
+      $newStatus = $subscriber->status;
     }
 
-    if($subscriber->save()) {
-      if(!empty($custom_fields)) {
-        $subscriber->saveCustomFields($custom_fields);
+    // Update last_subscribed_at when status changes to subscribed
+    if ($oldStatus !== self::STATUS_SUBSCRIBED && $subscriber->status === self::STATUS_SUBSCRIBED) {
+      $subscriber->set('last_subscribed_at', WPFunctions::get()->currentTime('mysql'));
+    }
+
+    if ($subscriber->save()) {
+      if (!empty($customFields)) {
+        $subscriber->saveCustomFields($customFields);
       }
 
       // check for status change
-      if(
-          ($old_status === self::STATUS_SUBSCRIBED)
+      if (
+          ($oldStatus === self::STATUS_SUBSCRIBED)
           &&
-          ($new_status === self::STATUS_UNSUBSCRIBED)
+          ($newStatus === self::STATUS_UNSUBSCRIBED)
       ) {
         // make sure we unsubscribe the user from all segments
         SubscriberSegment::unsubscribeFromSegments($subscriber);
       } else {
-        if($segment_ids !== false) {
-          SubscriberSegment::resetSubscriptions($subscriber, $segment_ids);
+        if ($segmentIds !== false) {
+          SubscriberSegment::resetSubscriptions($subscriber, $segmentIds);
         }
       }
     }
     return $subscriber;
   }
 
-  function withCustomFields() {
-    $custom_fields = CustomField::select('id')->findArray();
-    if(empty($custom_fields)) return $this;
+  public function withCustomFields() {
+    $customFields = CustomField::select('id')->findArray();
+    if (empty($customFields)) return $this;
 
-    $custom_field_ids = array_column($custom_fields, 'id');
+    $customFieldIds = array_column($customFields, 'id');
     $relations = SubscriberCustomField::select('custom_field_id')
       ->select('value')
-      ->whereIn('custom_field_id', $custom_field_ids)
+      ->whereIn('custom_field_id', $customFieldIds)
       ->where('subscriber_id', $this->id())
       ->findMany();
-    foreach($relations as $relation) {
-      $this->{'cf_'.$relation->custom_field_id} = $relation->value;
+    foreach ($relations as $relation) {
+      $this->{'cf_' . $relation->customFieldId} = $relation->value;
     }
 
     return $this;
   }
 
-  function withSegments() {
+  public function withSegments() {
     $this->segments = $this->segments()->findArray();
     return $this;
   }
 
-  function withSubscriptions() {
+  public function withSubscriptions() {
     $this->subscriptions = SubscriberSegment::where('subscriber_id', $this->id())
       ->findArray();
     return $this;
   }
 
-  function getCustomField($custom_field_id, $default = null) {
-    $custom_field = SubscriberCustomField::select('value')
-      ->where('custom_field_id', $custom_field_id)
+  public function getCustomField($customFieldId, $default = null) {
+    $customField = SubscriberCustomField::select('value')
+      ->where('custom_field_id', $customFieldId)
       ->where('subscriber_id', $this->id())
       ->findOne();
 
-    if($custom_field === false) {
-      return $default;
+    if ($customField instanceof SubscriberCustomField) {
+      return $customField->value;
     } else {
-      return $custom_field->value;
+      return $default;
     }
   }
 
-  function saveCustomFields($custom_fields_data = array()) {
+  public function saveCustomFields($customFieldsData = []) {
     // get custom field ids
-    $custom_field_ids = array_keys($custom_fields_data);
+    $customFieldIds = array_keys($customFieldsData);
 
     // get custom fields
-    $custom_fields = CustomField::findMany($custom_field_ids);
+    $customFields = CustomField::whereIdIn($customFieldIds)->findMany();
 
-    foreach($custom_fields as $custom_field) {
-      $value = (isset($custom_fields_data[$custom_field->id])
-        ? $custom_fields_data[$custom_field->id]
+    foreach ($customFields as $customField) {
+      $value = (isset($customFieldsData[$customField->id])
+        ? $customFieldsData[$customField->id]
         : null
       );
       // format value
-      $value = $custom_field->formatValue($value);
+      $value = $customField->formatValue($value);
 
-      $this->setCustomField($custom_field->id, $value);
+      $this->setCustomField($customField->id, $value);
     }
   }
 
-  function setCustomField($custom_field_id, $value) {
-    return SubscriberCustomField::createOrUpdate(array(
+  public function setCustomField($customFieldId, $value) {
+    return SubscriberCustomField::createOrUpdate([
       'subscriber_id' => $this->id(),
-      'custom_field_id' => $custom_field_id,
-      'value' => $value
-    ));
+      'custom_field_id' => $customFieldId,
+      'value' => $value,
+    ]);
   }
 
-  function setUnconfirmedData(array $subscriber_data) {
-    $subscriber_data = self::filterOutReservedColumns($subscriber_data);
-    $this->unconfirmed_data = json_encode($subscriber_data);
+  public function setUnconfirmedData(array $subscriberData) {
+    $subscriberData = self::filterOutReservedColumns($subscriberData);
+    $encoded = json_encode($subscriberData);
+    if (is_string($encoded)) {
+      $this->unconfirmedData = $encoded;
+    }
   }
 
-  function getUnconfirmedData() {
-    if(!empty($this->unconfirmed_data)) {
-      $subscriber_data = json_decode($this->unconfirmed_data, true);
-      $subscriber_data = self::filterOutReservedColumns((array)$subscriber_data);
-      return $subscriber_data;
+  public function getUnconfirmedData() {
+    if (!empty($this->unconfirmedData)) {
+      $subscriberData = json_decode($this->unconfirmedData, true);
+      $subscriberData = self::filterOutReservedColumns((array)$subscriberData);
+      return $subscriberData;
     }
     return null;
   }
 
-  static function bulkAddToList($orm, $data = array()) {
-    $segment_id = (isset($data['segment_id']) ? (int)$data['segment_id'] : 0);
-    $segment = Segment::findOne($segment_id);
-
-    if($segment === false) return false;
-
-    $count = parent::bulkAction($orm,
-      function($subscriber_ids) use($segment) {
-        SubscriberSegment::subscribeManyToSegments(
-          $subscriber_ids, array($segment->id)
-        );
-      }
-    );
-
-    return array(
-      'count' => $count,
-      'segment' => $segment->name
-    );
-  }
-
-  static function bulkMoveToList($orm, $data = array()) {
-    $segment_id = (isset($data['segment_id']) ? (int)$data['segment_id'] : 0);
-    $segment = Segment::findOne($segment_id);
-
-    if($segment === false) return false;
-
-    $count = parent::bulkAction($orm,
-      function($subscriber_ids) use($segment) {
-        SubscriberSegment::deleteManySubscriptions($subscriber_ids);
-        SubscriberSegment::subscribeManyToSegments(
-          $subscriber_ids, array($segment->id)
-        );
-      }
-    );
-
-    return array(
-      'count' => $count,
-      'segment' => $segment->name
-    );
-  }
-
-  static function bulkRemoveFromList($orm, $data = array()) {
-    $segment_id = (isset($data['segment_id']) ? (int)$data['segment_id'] : 0);
-    $segment = Segment::findOne($segment_id);
-
-    if($segment === false) return false;
-
-    $count = $orm->count();
-
-    parent::bulkAction($orm, function($subscriber_ids) use($segment) {
-      SubscriberSegment::deleteManySubscriptions(
-        $subscriber_ids, array($segment->id)
-      );
-    });
-
-    return array(
-      'count' => $count,
-      'segment' => $segment->name
-    );
-  }
-
-  static function bulkRemoveFromAllLists($orm, $data = array()) {
-    $count = $orm->count();
-
-    parent::bulkAction($orm, function($subscriber_ids) {
-      SubscriberSegment::deleteManySubscriptions($subscriber_ids);
-    });
-
-    return array(
-      'count' => $count
-    );
-  }
-
-  static function bulkSendConfirmationEmail($orm) {
-    $subscribers = $orm
-      ->where('status', self::STATUS_UNCONFIRMED)
-      ->findMany();
-
-    $emails_sent = 0;
-    if(!empty($subscribers)) {
-      $sender = new ConfirmationEmailMailer();
-      foreach($subscribers as $subscriber) {
-        if($sender->sendConfirmationEmail($subscriber)) {
-          $emails_sent++;
-        }
-      }
-    }
-
-    return array(
-      'count' => $emails_sent
-    );
-  }
-
-  static function getTotalSubscribers() {
-    return self::whereIn('status', array(
+  public static function getTotalSubscribers() {
+    return self::whereIn('status', [
       self::STATUS_SUBSCRIBED,
-      self::STATUS_UNCONFIRMED
-    ))
+      self::STATUS_UNCONFIRMED,
+      self::STATUS_INACTIVE,
+    ])
     ->whereNull('deleted_at')
     ->count();
   }
 
-  static function bulkTrash($orm) {
-    $count = parent::bulkAction($orm, function($subscriber_ids) {
-      Subscriber::rawExecute(join(' ', array(
-          'UPDATE `' . Subscriber::$_table . '`',
-          'SET `deleted_at` = NOW()',
-          'WHERE `id` IN ('.
-            rtrim(str_repeat('?,', count($subscriber_ids)), ',')
-          .')',
-          'AND `wp_user_id` IS NULL'
-        )),
-        $subscriber_ids
-      );
-    });
-
-    return array('count' => $count);
+  public static function getInactiveSubscribersCount() {
+    return self::where('status', self::STATUS_INACTIVE)
+    ->whereNull('deleted_at')
+    ->count();
   }
 
-  static function bulkDelete($orm) {
-    $count = parent::bulkAction($orm, function($subscriber_ids) {
-      // delete all subscriber/segment relationships
-      SubscriberSegment::deleteManySubscriptions($subscriber_ids);
-      // delete all subscriber/custom field relationships
-      SubscriberCustomField::deleteManySubscriberRelations($subscriber_ids);
-      // delete subscribers (except WP Users)
-      Subscriber::whereIn('id', $subscriber_ids)
-        ->whereNull('wp_user_id')
-        ->deleteMany();
-    });
-
-    return array('count' => $count);
-  }
-
-  static function subscribed($orm) {
+  public static function subscribed($orm) {
     return $orm
       ->whereNull('deleted_at')
       ->where('status', self::STATUS_SUBSCRIBED);
   }
 
-  static function unsubscribed($orm) {
+  public static function unsubscribed($orm) {
     return $orm
       ->whereNull('deleted_at')
       ->where('status', self::STATUS_UNSUBSCRIBED);
   }
 
-  static function unconfirmed($orm) {
+  public static function unconfirmed($orm) {
     return $orm
       ->whereNull('deleted_at')
       ->where('status', self::STATUS_UNCONFIRMED);
   }
 
-  static function bounced($orm) {
+  public static function bounced($orm) {
     return $orm
       ->whereNull('deleted_at')
       ->where('status', self::STATUS_BOUNCED);
   }
 
-  static function withoutSegments($orm) {
-    return $orm->select(MP_SUBSCRIBERS_TABLE.'.*')
+  public static function inactive($orm) {
+    return $orm
+      ->whereNull('deleted_at')
+      ->where('status', self::STATUS_INACTIVE);
+  }
+
+  public static function withoutSegments($orm) {
+    return $orm->select(MP_SUBSCRIBERS_TABLE . '.*')
       ->whereRaw(
         MP_SUBSCRIBERS_TABLE . '.id NOT IN (
           SELECT `subscriber_id`
-          FROM '.MP_SUBSCRIBER_SEGMENT_TABLE.'
-          WHERE `status` = "'.self::STATUS_SUBSCRIBED.'" AND `segment_id` IN (
-            SELECT `id` FROM '.MP_SEGMENTS_TABLE.' WHERE `deleted_at` IS NULL
+          FROM ' . MP_SUBSCRIBER_SEGMENT_TABLE . '
+          WHERE `status` = "' . self::STATUS_SUBSCRIBED . '" AND `segment_id` IN (
+            SELECT `id` FROM ' . MP_SEGMENTS_TABLE . ' WHERE `deleted_at` IS NULL
           )
         )'
       );
   }
 
-  static function createMultiple($columns, $values) {
+  public static function createMultiple($columns, $values) {
     return self::rawExecute(
       'INSERT INTO `' . self::$_table . '` ' .
       '(' . implode(', ', $columns) . ') ' .
@@ -735,68 +570,69 @@ class Subscriber extends Model {
     );
   }
 
-  static function updateMultiple($columns, $subscribers, $updated_at = false) {
-    $ignore_columns_on_update = array(
+  public static function updateMultiple($columns, $subscribers, $updatedAt = false) {
+    $ignoreColumnsOnUpdate = [
       'wp_user_id',
+      'is_woocommerce_user',
       'email',
       'created_at',
-      'status'
-    );
+      'last_subscribed_at',
+    ];
     // check if there is anything to update after excluding ignored columns
-    if(!array_diff($columns, $ignore_columns_on_update)) return;
+    if (!array_diff($columns, $ignoreColumnsOnUpdate)) return;
     $subscribers = array_map('array_values', $subscribers);
-    $email_position = array_search('email', $columns);
+    $emailPosition = array_search('email', $columns);
     $sql =
       function($type) use (
         $columns,
         $subscribers,
-        $email_position,
-        $ignore_columns_on_update
+        $emailPosition,
+        $ignoreColumnsOnUpdate
       ) {
         return array_filter(
-          array_map(function($column_position, $column_name) use (
+          array_map(function($columnPosition, $columnName) use (
             $type,
             $subscribers,
-            $email_position,
-            $ignore_columns_on_update
+            $emailPosition,
+            $ignoreColumnsOnUpdate
           ) {
-            if(in_array($column_name, $ignore_columns_on_update)) return;
+            if (in_array($columnName, $ignoreColumnsOnUpdate)) return;
             $query = array_map(
-              function($subscriber) use ($type, $column_position, $email_position) {
+              function($subscriber) use ($type, $columnPosition, $emailPosition) {
                 return ($type === 'values') ?
-                  array(
-                    $subscriber[$email_position],
-                    $subscriber[$column_position]
-                  ) :
+                  [
+                    $subscriber[$emailPosition],
+                    $subscriber[$columnPosition],
+                  ] :
                   'WHEN email = ? THEN ?';
               }, $subscribers);
             return ($type === 'values') ?
               Helpers::flattenArray($query) :
-              $column_name . '= (CASE ' . implode(' ', $query) . ' END)';
+              $columnName . '= (CASE ' . implode(' ', $query) . ' END)';
           }, array_keys($columns), $columns)
         );
       };
     return self::rawExecute(
       'UPDATE `' . self::$_table . '` ' .
       'SET ' . implode(', ', $sql('statement')) . ' ' .
-      (($updated_at) ? ', updated_at = "' . $updated_at . '" ' : '') .
+      (($updatedAt) ? ', updated_at = "' . $updatedAt . '" ' : '') .
       ', unconfirmed_data = NULL ' .
       'WHERE email IN ' .
       '(' . rtrim(str_repeat('?,', count($subscribers)), ',') . ')',
       array_merge(
         Helpers::flattenArray($sql('values')),
-        array_column($subscribers, $email_position)
+        array_column($subscribers, $emailPosition)
       )
     );
   }
 
-  static function findSubscribersInSegments(array $subscribers_ids, array $segments_ids) {
-    return self::getSubscribedInSegments($segments_ids)
-      ->whereIn('subscribers.id', $subscribers_ids)
+  public static function findSubscribersInSegments(array $subscribersIds, array $segmentsIds) {
+    return self::getSubscribedInSegments($segmentsIds)
+      ->whereIn('subscribers.id', $subscribersIds)
       ->select('subscribers.*');
   }
 
-  static function extractSubscribersIds(array $subscribers) {
+  public static function extractSubscribersIds(array $subscribers) {
     return array_filter(
       array_map(function($subscriber) {
         return (!empty($subscriber->id)) ? $subscriber->id : false;
@@ -804,44 +640,58 @@ class Subscriber extends Model {
     );
   }
 
-  static function setRequiredFieldsDefaultValues($data) {
-    $required_field_default_values = array(
+  public static function setRequiredFieldsDefaultValues($data) {
+    $settings = SettingsController::getInstance();
+    $requiredFieldDefaultValues = [
       'first_name' => '',
       'last_name' => '',
-      'status' => (!Setting::getValue('signup_confirmation.enabled')) ? self::STATUS_SUBSCRIBED : self::STATUS_UNCONFIRMED
-    );
-    foreach($required_field_default_values as $field => $value) {
-      if(!isset($data[$field])) {
+      'unsubscribe_token' => Security::generateUnsubscribeToken(self::class),
+      'link_token' => Security::generateRandomString(self::LINK_TOKEN_LENGTH),
+      'status' => (!$settings->get('signup_confirmation.enabled')) ? self::STATUS_SUBSCRIBED : self::STATUS_UNCONFIRMED,
+    ];
+    foreach ($requiredFieldDefaultValues as $field => $value) {
+      if (!isset($data[$field])) {
         $data[$field] = $value;
       }
     }
     return $data;
   }
 
-  static function extractCustomFieldsFromFromObject($data) {
-    $custom_fields = array();
-    foreach($data as $key => $value) {
-      if(strpos($key, 'cf_') === 0) {
-        $custom_fields[(int)substr($key, 3)] = $value;
+  public static function extractCustomFieldsFromFromObject($data) {
+    $customFields = [];
+    foreach ($data as $key => $value) {
+      if (strpos($key, 'cf_') === 0) {
+        $customFields[(int)substr($key, 3)] = $value;
         unset($data[$key]);
       }
     }
-    return array($data, $custom_fields);
+    return [$data, $customFields];
   }
 
   public function getAllSegmentNamesWithStatus() {
-    return Segment::table_alias('segment')
+    return Segment::tableAlias('segment')
       ->select('name')
       ->select('subscriber_segment.segment_id', 'segment_id')
       ->select('subscriber_segment.status', 'status')
       ->select('subscriber_segment.updated_at', 'updated_at')
       ->join(
         SubscriberSegment::$_table,
-        array('subscriber_segment.segment_id', '=', 'segment.id'),
+        ['subscriber_segment.segment_id', '=', 'segment.id'],
         'subscriber_segment'
       )
       ->where('subscriber_segment.subscriber_id', $this->id)
       ->orderByAsc('name')
       ->findArray();
+  }
+
+  /**
+   * This method is here only for BC fix of 3rd party plugin integration.
+   * @see https://kb.mailpoet.com/article/195-add-subscribers-through-your-own-form-or-plugin
+   * @deprecated
+   */
+  public static function subscribe($subscriberData = [], $segmentIds = []) {
+    trigger_error('Calling Subscriber::subscribe() is deprecated and will be removed. Use MailPoet\API\MP\v1\API instead. ', E_USER_DEPRECATED);
+    $service = ContainerWrapper::getInstance()->get(\MailPoet\Subscribers\SubscriberActions::class);
+    return $service->subscribe($subscriberData, $segmentIds);
   }
 }

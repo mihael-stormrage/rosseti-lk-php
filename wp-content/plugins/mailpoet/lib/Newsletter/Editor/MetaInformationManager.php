@@ -1,55 +1,57 @@
 <?php
+
 namespace MailPoet\Newsletter\Editor;
 
-if(!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit;
+
+
+use MailPoet\WP\Functions as WPFunctions;
 
 class MetaInformationManager {
-
-  function appendMetaInformation($content, $post, $args) {
+  public function appendMetaInformation($content, $post, $args) {
     // Append author and categories above and below contents
-    foreach(array('above', 'below') as $position) {
-      $position_field = $position . 'Text';
-      $text = array();
+    foreach (['above', 'below'] as $position) {
+      $positionField = $position . 'Text';
+      $text = [];
 
-      if($args['showAuthor'] === $position_field) {
+      if (isset($args['showAuthor']) && $args['showAuthor'] === $positionField) {
         $text[] = self::getPostAuthor(
-          $post->post_author,
+          $post->post_author, // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
           $args['authorPrecededBy']
         );
       }
 
-      if($args['showCategories'] === $position_field) {
+      if (isset($args['showCategories']) && $args['showCategories'] === $positionField) {
         $text[] = self::getPostCategories(
           $post->ID,
-          $post->post_type,
+          $post->post_type, // phpcs:ignore Squiz.NamingConventions.ValidVariableName.NotCamelCaps
           $args['categoriesPrecededBy']
         );
       }
 
-      if(!empty($text)) {
+      if (!empty($text)) {
         $text = '<p>' . implode('<br />', $text) . '</p>';
-        if($position === 'above') $content = $text . $content;
-        else if($position === 'below') $content .= $text;
+        if ($position === 'above') $content = $text . $content;
+        else if ($position === 'below') $content .= $text;
       }
     }
 
     return $content;
   }
 
-
-  private static function getPostCategories($post_id, $post_type, $preceded_by) {
-    $preceded_by = trim($preceded_by);
+  private static function getPostCategories($postId, $postType, $precededBy) {
+    $precededBy = trim($precededBy);
 
     // Get categories
-    $categories = wp_get_post_terms(
-      $post_id,
-      array('category'),
-      array('fields' => 'names')
+    $categories = WPFunctions::get()->wpGetPostTerms(
+      $postId,
+      ['category'],
+      ['fields' => 'names']
     );
-    if(!empty($categories)) {
+    if (!empty($categories)) {
       // check if the user specified a label to be displayed before the author's name
-      if(strlen($preceded_by) > 0) {
-        $content = stripslashes($preceded_by) . ' ';
+      if (strlen($precededBy) > 0) {
+        $content = stripslashes($precededBy) . ' ';
       } else {
         $content = '';
       }
@@ -60,14 +62,14 @@ class MetaInformationManager {
     }
   }
 
-  private static function getPostAuthor($author_id, $preceded_by) {
-    $author_name = get_the_author_meta('display_name', (int)$author_id);
+  private static function getPostAuthor($authorId, $precededBy) {
+    $authorName = WPFunctions::get()->getTheAuthorMeta('display_name', (int)$authorId);
 
-    $preceded_by = trim($preceded_by);
-    if(strlen($preceded_by) > 0) {
-      $author_name = stripslashes($preceded_by) . ' ' . $author_name;
+    $precededBy = trim($precededBy);
+    if (strlen($precededBy) > 0) {
+      $authorName = stripslashes($precededBy) . ' ' . $authorName;
     }
 
-    return $author_name;
+    return $authorName;
   }
 }
