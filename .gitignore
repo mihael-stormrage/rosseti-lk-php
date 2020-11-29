@@ -96,8 +96,6 @@ Thumbs.db
 !CHANGELOG.md
 !composer.json
 
-!.htaccess
-
 # track favicon files, if they exist
 !android-chrome-*.png
 !apple-touch-icon*.png
@@ -115,5 +113,7 @@ Thumbs.db
 # !wp-content/plugins/example-plugin/
 !wp-content/themes/global/
 
-# track DB dump
+# track local demo files
 !dump.sql
+!.htaccess
+!wp-config.php
