@@ -10,9 +10,9 @@
 
 ## Зависимости
 
-- Веб-сервер: Open Server Panel Basic 5.3.7 (torrent)
-- Wordpress 5.5.3
-- Composer 2.0
+- Веб-сервер: [Open Server Panel Basic][ospanel] 5.3.7 ([torrent][ospanel-torrent])
+- [Wordpress] 5.5.3
+- [Composer] 2.0
 
 ## Установка
 
@@ -47,3 +47,9 @@ composer install
 Готово! Можете открывать портал в браузере по адресу `localhost` или через контекстоное меню веб-сервера **Мои проекты**.
 
 Админка доступна по адресу `localhost/wp-admin`, данные входа: `admin:admin`
+
+[git]: https://git-scm.com
+[ospanel]: https://ospanel.io
+[ospanel-torrent]: https://rutracker.org/forum/viewtopic.php?t=5884670
+[wordpress]: https://ru.wordpress.org/download/
+[composer]: https://getcomposer.org
